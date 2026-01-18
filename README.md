@@ -15,8 +15,7 @@ With the `dev` feature, you can press <key>\`</key> (backtick) to toggle a comma
 - Spell system experimentation and rebalancing. What would it be like to play through Magicka with on-release Wizard Wars balance?
 - Easier modding?
 
-## Non-goals
-- Replace or compete with Magicka
+![Screenshot outside Castle Aldrheim](docs/assets/screenshot.jpg)
 
 ## Development
 [Bevy](https://bevy.org) is used for ECS, rendering, etc.
