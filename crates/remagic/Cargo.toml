@@ -1,0 +1,9 @@
+[package]
+name = "remagic"
+edition = "2024"
+
+[dependencies]
+ddsfile = "0.5.2"
+lzxd = "0.2.6"
+num_enum = "0.7.5"
+winnow = "0.7.14"
