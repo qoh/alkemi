@@ -1,11 +1,11 @@
 ## Assets
-- Configurable Magicka game path  
-  It's currently hardcoded as `/data/SteamLibrary/steamapps/common/Magicka/Content/` in `src/magicka_assets.rs`.  
-  Ideally it would be a Bevy asset source, so that `"magicka:Levels/Swamp.lvl"` refers to `Magicka/Content/Levels/Swamp.lvl`.
 - Load each asset only once  
   Lack of this causes more delay than necessary when switching to a level that has many NPCs/enemies.
   This would be done by loading assets through the Bevy asset system, which already deduplicates.
 - Read character template special abilities, events, buffs, & auras
+- Auto-locate Magicka install, UI for configuring it
+- Magicka content Bevy asset source  
+  (so that `.load("magicka:Levels/Swamp.lvl")` refers to `Magicka/Content/Levels/Swamp.lvl`)
 
 ## Gameplay
 - Combat, health, statuses

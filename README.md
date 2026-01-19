@@ -5,7 +5,7 @@
 A project to give Magicka players an easier way to experiment with gameplay and content creation, and better modern platform hardware support including Linux/Vulkan. It directly reads your original installed assets from your legal copy of Magicka. You must obtain Magicka from Paradox Interactive.
 
 ## Notes
-The path to your Magicka files is currently hardcoded, see [TODO.md](./TODO.md).
+You need to set the `MAGICKA_CONTENT_DIR` environment variable to the path of the *Content* directory in your Magicka install.
 
 With the `dev` feature, you can press <key>\`</key> (backtick) to toggle a command line. Type `scene` to switch level, `inspect_world` to inspect entities/components/assets/resources, and `list_acts` to all list commands.
 

@@ -6,8 +6,9 @@ use bevy::prelude::*;
 use std::{
     fs, io,
     path::{Component, Path, PathBuf},
+    sync::OnceLock,
 };
-use typed_path::PlatformPath;
+use typed_path::{PlatformPath, PlatformPathBuf};
 
 pub fn plugin(app: &mut App) {
     app.register_asset_loader(image::MagickaTexture2dLoader);
@@ -16,9 +17,27 @@ pub fn plugin(app: &mut App) {
     app.init_asset_loader::<character_template::CharacterTemplateLoader>();
 }
 
+static CONTENT_DIR: OnceLock<PlatformPathBuf> = OnceLock::new();
+
 pub fn content_root() -> &'static PlatformPath {
-    // TODO: Configurable game path
-    PlatformPath::new("/data/SteamLibrary/steamapps/common/Magicka/Content/")
+    const VAR: &str = "MAGICKA_CONTENT_DIR";
+
+    CONTENT_DIR.get_or_init(|| {
+        match std::env::var_os(VAR) {
+            Some(dir) => {
+                match PlatformPathBuf::try_from(PathBuf::from(dir)) {
+                    Ok(dir) => dir,
+                    Err(dir) => panic!(
+                        "Magicka Content directory configured with {VAR} is not a valid path: {dir:?}"
+                    ),
+                }
+            }
+            // TODO: Automatically scan for game location
+            None => panic!(
+                "\n\nMagicka Content directory unknown. Set the {VAR} environment variable to the path to your Magicka install's Content directory.\n\n"
+            ),
+        }
+    })
 }
 
 pub fn read_ignore_path_ascii_case(path: impl AsRef<Path>) -> Result<Vec<u8>, io::Error> {
