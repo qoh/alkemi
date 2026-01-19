@@ -1,6 +1,7 @@
 pub mod character_template;
 pub mod image;
 pub mod skinned_model;
+pub mod visual_effect;
 
 use bevy::prelude::*;
 use std::{
@@ -15,6 +16,9 @@ pub fn plugin(app: &mut App) {
 
     app.init_asset::<character_template::CharacterTemplate>();
     app.init_asset_loader::<character_template::CharacterTemplateLoader>();
+
+    app.init_asset::<visual_effect::VisualEffect>();
+    app.init_asset_loader::<visual_effect::VisualEffectLoader>();
 }
 
 static CONTENT_DIR: OnceLock<PlatformPathBuf> = OnceLock::new();

@@ -25,6 +25,7 @@ pub fn plugin(app: &mut App) {
         (
             animated_parts::debug_animated_parts,
             visual_effects::debug_visual_effects,
+            visual_effects::assign_visual_effect_scene,
             debug_trigger_areas,
             debug_locators,
         ),
@@ -110,7 +111,7 @@ pub fn spawn_level(
         }
 
         for visual_effect in &level_data.visual_effects {
-            visual_effects::spawn_visual_effect(Spawner::Parent(parent), visual_effect);
+            visual_effects::spawn_visual_effect(Spawner::Parent(parent), visual_effect, &assets);
         }
 
         for physics_entity in &level_data.physics_entities {

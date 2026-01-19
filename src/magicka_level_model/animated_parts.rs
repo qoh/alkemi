@@ -125,7 +125,7 @@ pub(crate) fn spawn_animated_part(
             );
         }
         for visual_effect in &animated_part.effects {
-            spawn_visual_effect(Spawner::Parent(parent), visual_effect);
+            spawn_visual_effect(Spawner::Parent(parent), visual_effect, assets);
         }
         for (name, locator) in &animated_part.locators {
             spawn_locator(Spawner::Parent(parent), name.to_owned(), locator);
