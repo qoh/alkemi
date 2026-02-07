@@ -6,6 +6,7 @@ mod magicka_level_model;
 mod magicka_scene;
 mod scene;
 mod script_triggers;
+mod spelling;
 
 use avian3d::prelude::*;
 use bevy::{
@@ -38,6 +39,7 @@ fn main() -> AppExit {
         camera::plugin,
         character::plugin,
         script_triggers::plugin,
+        spelling::plugin,
     ));
     app.add_systems(PreUpdate, update_cursor_grab);
 

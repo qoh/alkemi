@@ -154,6 +154,8 @@ pub(crate) fn spawn_player_character(
 
     world.entity_mut(player_entity).insert((
         Name::new(format!("Player {player_index}")),
+        crate::spelling::bundle_m1(),
+        crate::spelling::bindings_m1(),
         CameraGroupMember,
         crate::PlayerControlled,
         bevy_landmass::Character::<bevy_landmass::coords::ThreeD>::default(),

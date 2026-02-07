@@ -9,7 +9,7 @@
 
 ## Gameplay
 - Combat, health, statuses
-- Spellcasting, Magicks
+- Casting queued elements as spells & Magicks
 - Multiplayer
 - AI
 - Drowning, freezing and walking over liquid
@@ -28,6 +28,7 @@
 - Per-character model tint colors
 - Particle effects
 - Skybox
+- Queued element mote particle effects (in addition to light)
 
 ## Quality
 - Ensure unsupported or malformed assets don't cause panics
