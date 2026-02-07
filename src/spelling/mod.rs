@@ -1,3 +1,4 @@
+mod casting;
 mod chanting;
 mod chanting_ui;
 mod chanting_vfx;
@@ -5,6 +6,10 @@ mod color;
 mod element;
 mod input;
 mod status;
+
+pub(crate) mod spells {
+    pub(crate) mod beam;
+}
 
 pub use input::bindings_m1;
 
@@ -16,6 +21,8 @@ pub fn plugin(app: &mut App) {
     app.register_type::<bevy_enhanced_input::prelude::Actions<input::SpellingInput>>();
 
     app.add_plugins((chanting::plugin, chanting_ui::plugin, chanting_vfx::plugin));
+    app.add_plugins(casting::plugin);
+    app.add_plugins(spells::beam::plugin);
 }
 
 pub fn bundle_m1() -> impl Bundle {

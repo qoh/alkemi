@@ -9,6 +9,9 @@ mod nav_mesh;
 mod visual_effects;
 mod xna_geom;
 
+// TODO: Move the definition of Layers out of magicka_level_model
+pub use collision::Layers;
+
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use std::collections::HashMap;
 use typed_path::PlatformPath;
