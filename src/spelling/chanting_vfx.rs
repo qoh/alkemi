@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{mesh::SphereMeshBuilder, prelude::*};
 
 use crate::spelling::{chanting::ElementQueue, element::Element};
 
@@ -8,7 +8,11 @@ pub fn plugin(app: &mut App) {
     // TODO: Does apply_queue_to_motes need a manual apply deferred commands after it?
     app.add_systems(
         Update,
-        (apply_queue_to_motes, (change_mote_light, move_mote)).chain(),
+        (
+            apply_queue_to_motes,
+            (change_mote_light, change_mote_scale, move_mote),
+        )
+            .chain(),
     );
 }
 
@@ -53,6 +57,7 @@ fn apply_queue_to_motes(
     changed_queues: Query<(&ElementQueue, &ElementQueueMoteSource), Changed<ElementQueue>>,
     mote_sources: Query<Option<&Children>, With<ElementQueueMoteSourceOf>>,
     mut motes: Query<&mut QueuedElementMote>,
+    assets: Res<AssetServer>,
     mut commands: Commands,
     mut buffer_magnitudes: Local<std::collections::HashMap<Element, u8>>,
 ) {
@@ -97,11 +102,61 @@ fn apply_queue_to_motes(
                 }
             }
             // If there is none, spawn one
+            let new_mote = QueuedElementMote { element, magnitude };
             commands
                 .entity(source_ref.0)
-                .with_child(QueuedElementMote { element, magnitude });
+                .with_child(mote_bundle(new_mote, &assets));
         }
     }
+}
+
+// XXX: The mesh/material does not update if QueuedElementMote.element changes
+fn mote_bundle(init: QueuedElementMote, assets: &AssetServer) -> impl Bundle {
+    let mesh: Mesh = match init.element {
+        Element::Earth => Sphere::new(0.15).mesh().uv(5, 3),
+        Element::Ice => Sphere::new(0.15).mesh().uv(4, 2),
+        _ => Sphere::new(0.15).mesh().ico(2).unwrap(),
+    };
+    let color = element_color(init.element);
+    let is_emissive = !matches!(init.element, Element::Earth | Element::Steam | Element::Ice);
+    let color = match init.element {
+        Element::Lightning => color * 1.5,
+        Element::Ice => color.lighter(0.2),
+        _ => color,
+    };
+    let mat = StandardMaterial {
+        base_color: if is_emissive {
+            Color::BLACK
+        } else {
+            color.into()
+        },
+        emissive: if is_emissive {
+            color
+        } else {
+            LinearRgba::BLACK
+        },
+        emissive_exposure_weight: match init.element {
+            Element::Lightning => -30.,
+            Element::Arcane => -20.,
+            Element::Life | Element::Fire => -10.,
+            _ => -5.,
+        },
+        perceptual_roughness: match init.element {
+            Element::Earth => 0.97,
+            Element::Water => 0.2,
+            _ => 0.5,
+        },
+        alpha_mode: match init.element {
+            Element::Water | Element::Steam | Element::Poison => AlphaMode::Add,
+            _ => AlphaMode::default(),
+        },
+        ..default()
+    };
+    (
+        Mesh3d(assets.add(mesh)),
+        MeshMaterial3d(assets.add(mat)),
+        init,
+    )
 }
 
 fn change_mote_light(
@@ -109,9 +164,21 @@ fn change_mote_light(
 ) {
     for (mut light, mote) in motes {
         let magnitude_fac = 0.2 * (mote.magnitude as f32);
-        let (color, color_strength) = element_color(mote.element);
+        let (color, color_strength) = normalize_color(element_color(mote.element));
         light.color = color.into();
         light.intensity = magnitude_fac * color_strength * 100_000.0;
+    }
+}
+
+fn change_mote_scale(
+    motes: Query<(&mut Transform, &QueuedElementMote), Changed<QueuedElementMote>>,
+) {
+    for (mut trans, mote) in motes {
+        let scale = match mote.element {
+            Element::Shield => 1., // Shield is its own opposite, so won't have meaningful magnitude
+            _ => 0.6 + 0.2 * (mote.magnitude as f32),
+        };
+        trans.scale = Vec3::splat(scale);
     }
 }
 
@@ -122,8 +189,8 @@ fn move_mote(
 ) {
     let distance = 1.;
     let orbit_period = 3.;
-    let bob_period = 2.;
-    let bob_variance = 0.25;
+    let bob_period = 1.;
+    let bob_variance = 0.3;
     let index_phase_offset = orbit_period * (1. / 5.);
     for (mote, mut mote_trans, mote_parent) in motes {
         let index_in_parent = mote_parent
@@ -140,7 +207,7 @@ fn move_mote(
     }
 }
 
-fn element_color(element: Element) -> (LinearRgba, f32) {
+fn element_color(element: Element) -> LinearRgba {
     use Element::*;
     let rgb = Vec3::from(match element {
         Water => (0., 0.7, 1.3),
@@ -156,6 +223,11 @@ fn element_color(element: Element) -> (LinearRgba, f32) {
         Poison => (1., 1.2, 0.),
         Lok => (0.2, 0.3, 0.3),
     });
-    let (rgb, magnitude) = rgb.normalize_and_length();
-    (LinearRgba::from_vec3(rgb), magnitude)
+    LinearRgba::from_vec3(rgb)
+}
+
+fn normalize_color(color: LinearRgba) -> (LinearRgba, f32) {
+    let (rgb, magnitude) = color.to_vec3().normalize_and_length();
+    let color = LinearRgba::from_vec3(rgb).with_alpha(color.alpha);
+    (color, magnitude)
 }
