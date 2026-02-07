@@ -16,7 +16,7 @@ use bevy::{
 use bevy_asset_loader::prelude::*;
 use bevy_seedling::prelude::*;
 
-fn main() {
+fn main() -> AppExit {
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins.set(AssetPlugin {
@@ -46,7 +46,7 @@ fn main() {
     #[cfg(feature = "dev")]
     app.add_plugins(dev::plugin);
 
-    app.run();
+    app.run()
 }
 
 fn setup_scenes(app: &mut App) {
