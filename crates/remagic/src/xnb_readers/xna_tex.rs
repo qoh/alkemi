@@ -58,6 +58,7 @@ pub(crate) fn texture_2d(input: &mut Stream) -> Result<Texture2d> {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, TryFromPrimitive)]
 #[repr(i32)]
 pub enum SurfaceFormat {
+    /// (Unsigned format) 32-bit ARGB pixel format with alpha, using 8 bits per channel.
     Color = 1,
     Bgr32 = 2,
     Bgra1010102 = 3,

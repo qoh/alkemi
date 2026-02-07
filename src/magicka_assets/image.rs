@@ -49,6 +49,14 @@ impl AssetLoader for MagickaTexture2dLoader {
                     bevy::render::render_resource::TextureFormat::Bc3RgbaUnorm
                 }
             }
+            remagic::xnb_readers::xna_tex::SurfaceFormat::Color => {
+                let format = bevy::render::render_resource::TextureFormat::Bgra8Unorm;
+                if settings.is_srgb {
+                    format.add_srgb_suffix()
+                } else {
+                    format.remove_srgb_suffix()
+                }
+            }
             _ => unimplemented!("texture format {:?}", texture_2d.format),
         };
 
