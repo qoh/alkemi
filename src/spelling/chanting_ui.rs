@@ -4,7 +4,11 @@ use bevy::{
     ui::{UiSystems, ui_layout_system},
 };
 
-use crate::spelling::{chanting::ElementQueue, element::Element};
+use crate::spelling::{
+    chanting::ElementQueue,
+    color::{element_color, normalize_color},
+    element::Element,
+};
 
 pub fn plugin(app: &mut App) {
     app.add_observer(spawn_bar).add_observer(despawn_bar);
@@ -214,7 +218,7 @@ fn display_queued_elements_text(
             text.clear();
             if let Some(element) = element_queue.queued_elements.get(index).copied() {
                 text.push(element_abbr(element));
-                **color = element_color(element).into();
+                **color = normalize_color(element_color(element)).0.into();
             } else {
                 text.push(' ');
                 **color = Color::WHITE;
@@ -240,24 +244,6 @@ fn display_queued_elements_text(
             Poison => 'P',
             Lok => 'L',
         }
-    }
-    fn element_color(element: Element) -> LinearRgba {
-        use Element::*;
-        let (r, g, b) = match element {
-            Water => (0., 0.7, 1.3),
-            Life => (0.2, 1.6, 0.2),
-            Shield => (2., 1.5, 1.),
-            Cold => (1., 1., 1.4),
-            Lightning => (0.75, 0.5, 1.),
-            Arcane => (2., 0.4, 0.6),
-            Earth => (0.3, 0.2, 0.1),
-            Fire => (1.8, 0.6, 0.4),
-            Steam => (1., 1., 1.),
-            Ice => (0.8, 0.9, 1.4),
-            Poison => (1., 1.2, 0.),
-            Lok => (0.2, 0.3, 0.3),
-        };
-        LinearRgba::from_vec3(Vec3::new(r, g, b).normalize())
     }
 }
 

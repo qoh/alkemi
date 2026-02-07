@@ -1,6 +1,7 @@
 mod chanting;
 mod chanting_ui;
 mod chanting_vfx;
+mod color;
 mod element;
 mod input;
 mod status;

@@ -39,6 +39,15 @@ pub enum HybridElement {
     Poison, // (hybrid only in Magicka 2)
 }
 
+impl Element {
+    pub fn all() -> &'static [Element] {
+        use Element::*;
+        &[
+            Water, Life, Shield, Cold, Lightning, Arcane, Earth, Fire, Steam, Ice, Poison, Lok,
+        ]
+    }
+}
+
 impl From<BaseElement> for Element {
     fn from(value: BaseElement) -> Self {
         match value {
@@ -161,5 +170,35 @@ fn breakdown(hybrid: HybridElement, with: BaseElement) -> Option<BaseElement> {
         (Steam, Cold) => Some(Water),
         (Poison, Life) => Some(Water),
         _ => None,
+    }
+}
+
+/// Element multiset - unordered magnitudes. Saturates on overflow.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Reflect)]
+pub struct Magnitudes {
+    #[reflect(ignore)]
+    counts: std::collections::HashMap<Element, u8>,
+}
+
+impl Magnitudes {
+    pub fn get(&self, element: Element) -> u8 {
+        self.counts.get(&element).copied().unwrap_or_default()
+    }
+
+    pub fn contains(&self, element: Element) -> bool {
+        self.counts.contains_key(&element)
+    }
+}
+
+impl FromIterator<Element> for Magnitudes {
+    fn from_iter<T: IntoIterator<Item = Element>>(iter: T) -> Self {
+        let mut mset = Self {
+            counts: Default::default(),
+        };
+        for item in iter {
+            let count = mset.counts.entry(item).or_default();
+            *count = count.saturating_add(1);
+        }
+        mset
     }
 }

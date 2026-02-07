@@ -1,6 +1,10 @@
 use bevy::{mesh::SphereMeshBuilder, prelude::*};
 
-use crate::spelling::{chanting::ElementQueue, element::Element};
+use crate::spelling::{
+    chanting::ElementQueue,
+    color::{element_color, normalize_color},
+    element::Element,
+};
 
 pub fn plugin(app: &mut App) {
     app.add_observer(spawn_mote_source)
@@ -67,7 +71,7 @@ fn apply_queue_to_motes(
         };
 
         // Determine how much there should be of each element
-        // TODO: Optimize this?
+        // TODO: Optimize this? It also duplicates elements::Magnitudes
         buffer_magnitudes.clear();
         for queued in queue.queued_elements.iter().copied() {
             let magnitude = buffer_magnitudes.entry(queued).or_default();
@@ -205,29 +209,4 @@ fn move_mote(
         let offset = (Vec2::from_angle(angle) * distance).extend(height).xzy();
         mote_trans.translation = offset;
     }
-}
-
-fn element_color(element: Element) -> LinearRgba {
-    use Element::*;
-    let rgb = Vec3::from(match element {
-        Water => (0., 0.7, 1.3),
-        Life => (0.2, 1.6, 0.2),
-        Shield => (2., 1.5, 1.),
-        Cold => (1., 1., 1.4),
-        Lightning => (0.75, 0.5, 1.),
-        Arcane => (2., 0.4, 0.6),
-        Earth => (0.3, 0.2, 0.1),
-        Fire => (1.8, 0.6, 0.4),
-        Steam => (1., 1., 1.),
-        Ice => (0.8, 0.9, 1.4),
-        Poison => (1., 1.2, 0.),
-        Lok => (0.2, 0.3, 0.3),
-    });
-    LinearRgba::from_vec3(rgb)
-}
-
-fn normalize_color(color: LinearRgba) -> (LinearRgba, f32) {
-    let (rgb, magnitude) = color.to_vec3().normalize_and_length();
-    let color = LinearRgba::from_vec3(rgb).with_alpha(color.alpha);
-    (color, magnitude)
 }
