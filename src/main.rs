@@ -136,5 +136,4 @@ fn update_cursor_grab(
     } else {
         CursorGrabMode::None
     };
-    cursor_options.visible = !grab;
 }
