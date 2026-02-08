@@ -192,6 +192,8 @@ fn move_mote(
     time: Res<Time>,
 ) {
     let distance = 1.;
+    let distance_variance = 0.2;
+    let distance_variance_period = 4.;
     let orbit_period = 3.;
     let bob_period = 1.;
     let bob_variance = 0.3;
@@ -201,10 +203,13 @@ fn move_mote(
             .and_then(|p| parents.get(p.parent()).ok())
             .and_then(|parent_children| parent_children.iter().position(|p| p == mote))
             .unwrap_or(0);
+        // Every other element goes the opposite way
+        let polarity = if index_in_parent % 2 == 0 { 1. } else { -1. };
         // TODO: Use .elapsed_wrapped() if possible
-        let t = time.elapsed_secs() + index_phase_offset * (index_in_parent as f32);
+        let t = polarity * (time.elapsed_secs() + index_phase_offset * (index_in_parent as f32));
         let angle = std::f32::consts::TAU * (t / orbit_period).fract();
         let height = bob_variance * (t / bob_period).cos();
+        let distance = distance * (1. + distance_variance * (t / distance_variance_period).sin());
         // Polar to cartesian
         let offset = (Vec2::from_angle(angle) * distance).extend(height).xzy();
         mote_trans.translation = offset;

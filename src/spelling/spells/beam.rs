@@ -158,7 +158,7 @@ fn shorten_despawn_stopped_beams(
         if let Some(mut removed) =
             state.filter_map_unchanged(|b| b.stopping_length_removed.as_mut())
         {
-            *removed += time.elapsed_secs() * beam.extend_speed;
+            *removed += time.delta_secs() * beam.extend_speed;
             if *removed >= trans.scale.x {
                 commands.entity(entity).try_despawn();
             }
