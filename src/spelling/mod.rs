@@ -5,11 +5,8 @@ mod chanting_vfx;
 mod color;
 mod element;
 mod input;
+mod spells;
 mod status;
-
-pub(crate) mod spells {
-    pub(crate) mod beam;
-}
 
 pub use input::bindings_m1;
 
@@ -34,6 +31,7 @@ pub fn bundle_m1() -> impl Bundle {
             combine_poison: false,
             lightning_cancels_water_first: false,
         },
+        casting::Caster::default(),
         input::SpellingInput,
     )
 }

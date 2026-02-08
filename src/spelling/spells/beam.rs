@@ -2,15 +2,24 @@
 //
 // Opposite beams that intersect will explode after 0.25 seconds
 
+use std::time::Duration;
+
 use avian3d::prelude::{LayerMask, PhysicsLayer as _, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use crate::{magicka_level_model::Layers, spelling::element::Magnitudes};
+use crate::{
+    magicka_level_model::Layers,
+    spelling::{
+        element::{Element, Magnitudes},
+        spells,
+    },
+};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
+            timeout_beams,
             extend_beams,
             collide_beams,
             shrink_colliding_beams,
@@ -18,8 +27,59 @@ pub fn plugin(app: &mut App) {
         )
             .chain(),
     );
+    app.add_observer(release_channeling_beam);
     app.add_observer(stop_beam);
     app.add_plugins(vfx::plugin);
+}
+
+pub fn beam_spell(caster: Entity, elements: Magnitudes) -> impl Bundle {
+    const LIFETIME_BASE: f32 = 1.;
+    const LIFETIME_ELEM: f32 = 2.;
+
+    let num_beam_elems =
+        elements.get(Element::Life) as u16 + (elements.get(Element::Arcane) as u16);
+    let lifetime = LIFETIME_BASE + LIFETIME_ELEM * (num_beam_elems as f32);
+
+    (
+        BeamSpell {
+            lifetime: Timer::from_seconds(lifetime, TimerMode::Once),
+        },
+        Beam {
+            elements,
+            ignore_entity: Some(caster),
+            ..default()
+        },
+    )
+}
+
+#[derive(Component, Debug, Reflect)]
+#[require(Beam)]
+struct BeamSpell {
+    pub lifetime: Timer,
+}
+
+fn release_channeling_beam(event: On<spells::Release>, mut beam_spells: Query<&mut BeamSpell>) {
+    let Ok(mut beam_spell) = beam_spells.get_mut(event.spell) else {
+        return;
+    };
+    // Require channeling for a minimum amount of time in case input stops very early
+    let minimum_channel_time = Duration::from_millis(500);
+    // If elapsed time is already past the minimum, the next tick will finish it immediately
+    beam_spell.lifetime.set_duration(minimum_channel_time);
+}
+
+fn timeout_beams(
+    beam_spells: Query<(Entity, &mut BeamSpell)>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    for (ent, mut spell) in beam_spells {
+        spell.lifetime.tick(time.delta());
+        if spell.lifetime.just_finished() {
+            commands.trigger(spells::Complete { spell: ent });
+            commands.trigger(Stop(ent));
+        }
+    }
 }
 
 #[derive(Component, Debug, Reflect)]
