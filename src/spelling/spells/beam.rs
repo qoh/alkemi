@@ -240,13 +240,19 @@ mod vfx {
 
     // TODO: Particles
 
-    use crate::spelling::color::spell_color;
+    use crate::spelling::{color::spell_color, spells::beam::BeamState};
 
-    use super::{Beam, extend_beams, shrink_colliding_beams};
-    use bevy::{light::NotShadowCaster, prelude::*};
+    use super::{Beam, extend_beams, shorten_despawn_stopped_beams, shrink_colliding_beams};
+    use bevy::{light::NotShadowCaster, prelude::*, time::Stopwatch};
 
     pub fn plugin(app: &mut App) {
         app.add_observer(add_beam_mesh);
+        app.add_systems(
+            Update,
+            animate_beam_scale_offset
+                .after(shrink_colliding_beams)
+                .after(shorten_despawn_stopped_beams),
+        );
         app.add_systems(
             Update,
             adjust_light_proportion
@@ -265,6 +271,11 @@ mod vfx {
     #[derive(Component, Debug)]
     pub struct PhasingLight {
         pub phase_offset: f32,
+    }
+
+    #[derive(Component, Debug, Default)]
+    struct BeamMesh {
+        elapsed: Stopwatch,
     }
 
     fn add_beam_mesh(
@@ -286,7 +297,8 @@ mod vfx {
             emissive_exposure_weight: -30., // -5.,
             ..default()
         };
-        commands.entity(event.entity).insert((
+        commands.entity(event.entity).with_child((
+            BeamMesh::default(),
             Mesh3d(meshes.add(beam_mesh())),
             MeshMaterial3d(materials.add(material)),
             NotShadowCaster,
@@ -324,6 +336,39 @@ mod vfx {
         SpawnIter(lights)
     }
 
+    fn animate_beam_scale_offset(
+        beams: Query<(&BeamState, &Transform), Without<BeamMesh>>,
+        meshes: Query<(&mut Transform, &mut BeamMesh, &ChildOf)>,
+        time: Res<Time>,
+    ) {
+        for (mut trans, mut mesh_state, parent_ref) in meshes {
+            mesh_state.elapsed.tick(time.delta());
+            let Ok((beam, beam_trans)) = beams.get(parent_ref.parent()) else {
+                continue;
+            };
+            let open_t = (mesh_state.elapsed.elapsed_secs() / 0.175).min(1.);
+            let mut width = CircularOutCurve.sample_clamped(open_t)
+                * QuinticInCurve.sample_clamped(open_t)
+                * BackOutCurve
+                    .sample_clamped(1. - (1. - open_t).powi(2))
+                    .powi(2);
+            if let Some(length_removed) = beam.stopping_length_removed {
+                let length = beam_trans.scale.x;
+                let t = (length_removed / length).min(1.);
+                trans.translation.x = t;
+                trans.scale.x = 1. - t;
+                width = (1. - t).powi(3).min(width);
+            }
+            let pulse_variance = width * 0.025;
+            let pulse_phase =
+                (mesh_state.elapsed.elapsed_secs().fract() * std::f32::consts::TAU).cos();
+            width *= 1. + (pulse_phase * pulse_variance);
+            trans.scale.y = width;
+            trans.scale.z = width;
+        }
+    }
+
+    // TODO: This should take into account global scale
     fn adjust_light_proportion(
         beams: Query<(&Transform, &Children)>,
         mut lights: Query<&mut PointLight, With<ChildOf>>,
