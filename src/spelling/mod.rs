@@ -5,6 +5,7 @@ mod chanting_vfx;
 mod color;
 mod element;
 mod input;
+mod spell_resolve;
 mod spells;
 mod status;
 

@@ -188,6 +188,14 @@ impl Magnitudes {
     pub fn contains(&self, element: Element) -> bool {
         self.counts.contains_key(&element)
     }
+
+    pub fn total(&self) -> usize {
+        self.counts.values().map(|x| *x as usize).sum()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.counts.is_empty()
+    }
 }
 
 impl FromIterator<Element> for Magnitudes {

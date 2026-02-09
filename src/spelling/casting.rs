@@ -2,6 +2,7 @@ use crate::spelling::{
     chanting::ElementQueue,
     element::Magnitudes,
     input::{CastArea, CastForward, CastImbue, CastMagick, CastSelf, SpellingInput},
+    spell_resolve,
     spells::{self, Spell},
 };
 
@@ -67,27 +68,59 @@ fn start_cast(
 
         let elements: Magnitudes = element_queue.queued_elements.drain(..).collect();
 
-        // TODO: Determine what spell to cast based on the queued elements
-        if elements.is_empty() {
-            // M1 would push
-            continue;
+        trace!("start cast {cast_type:?} with {:?}", elements);
+
+        let spell = match cast_type {
+            CastType::Forward => spell_resolve::spell_forward(&elements),
+            CastType::Area => spell_resolve::spell_area(&elements),
+            CastType::SelfCast => {
+                let Some(spell) = spell_resolve::spell_self(&elements) else {
+                    return; // ???
+                };
+                spell
+            }
+            CastType::Weapon => {
+                if elements.is_empty() {
+                    // TODO: Read imbued elements from weapon
+                    let imbued_elements = Magnitudes::default();
+                    let Some(spell) = spell_resolve::spell_weapon(&imbued_elements) else {
+                        return; // ???
+                    };
+                    spell
+                } else {
+                    spell_resolve::Spell::Imbue
+                }
+            }
+            CastType::Magick => {
+                let magick = {
+                    // TODO: Resolve magick
+                    return;
+                };
+                spell_resolve::Spell::Magick(magick)
+            }
+        };
+
+        trace!("spell is {spell:?}");
+
+        match spell {
+            spell_resolve::Spell::Beam => {
+                let spell = commands
+                    .spawn((
+                        ChildOf(caster_entity),
+                        Spell {
+                            caster: caster_entity,
+                        },
+                        spells::beam::beam_spell(caster_entity, elements),
+                        Transform::from_rotation(Quat::from_rotation_y(0.3)),
+                    ))
+                    .id();
+
+                caster.state = CasterState::Holding { cast_type, spell };
+            }
+            _ => {
+                warn!("unimplemented spell: {spell:?}");
+            }
         }
-
-        trace!("start spell cast with {:?}", elements);
-
-        // XXX: Just start a beam spell for now for testing
-        let spell = commands
-            .spawn((
-                ChildOf(caster_entity),
-                Spell {
-                    caster: caster_entity,
-                },
-                spells::beam::beam_spell(caster_entity, elements),
-                Transform::from_rotation(Quat::from_rotation_y(0.3)),
-            ))
-            .id();
-
-        caster.state = CasterState::Holding { cast_type, spell };
     }
 }
 
