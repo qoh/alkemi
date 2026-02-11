@@ -117,6 +117,20 @@ fn start_cast(
 
                 caster.state = CasterState::Holding { cast_type, spell };
             }
+            spell_resolve::Spell::Spray => {
+                let spell = commands
+                    .spawn((
+                        ChildOf(caster_entity),
+                        Spell {
+                            caster: caster_entity,
+                        },
+                        spells::spray::spray_spell(caster_entity, elements),
+                        Transform::from_rotation(Quat::from_rotation_y(0.3)),
+                    ))
+                    .id();
+
+                caster.state = CasterState::Holding { cast_type, spell };
+            }
             _ => {
                 warn!("unimplemented spell: {spell:?}");
             }
