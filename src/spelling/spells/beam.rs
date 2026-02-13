@@ -240,7 +240,7 @@ mod vfx {
 
     // TODO: Particles
 
-    use crate::spelling::{color::spell_color, spells::beam::BeamState};
+    use crate::spelling::{color::spell_color, element::Element, spells::beam::BeamState};
 
     use super::{Beam, extend_beams, shorten_despawn_stopped_beams, shrink_colliding_beams};
     use bevy::{light::NotShadowCaster, prelude::*, time::Stopwatch};
@@ -288,8 +288,6 @@ mod vfx {
         let Ok(beam) = beams.get(event.entity) else {
             return;
         };
-        // let color = LinearRgba::rgb(10., 0.2, 0.2);
-        // TODO: Color based on elements
         let color = spell_color(&beam.elements).unwrap_or(LinearRgba::rgb(0.03, 0.03, 0.03));
         let material = StandardMaterial {
             base_color: Color::BLACK,
@@ -297,35 +295,40 @@ mod vfx {
             emissive_exposure_weight: -30., // -5.,
             ..default()
         };
-        let material_core = StandardMaterial {
-            base_color: Color::BLACK,
-            unlit: true,
-            // depth_bias: 4_550.,
-            // depth_bias: 6_000.,
-            depth_bias: 2_250.,
-            ..default()
-        };
         let beam_mesh = meshes.add(beam_mesh());
-        commands.entity(event.entity).with_child((
-            BeamMesh::default(),
-            Mesh3d(beam_mesh.clone()),
-            MeshMaterial3d(materials.add(material)),
-            NotShadowCaster,
-            Children::spawn((
-                light_line(PointLight {
+        let display_child = commands
+            .spawn((
+                ChildOf(event.entity),
+                BeamMesh::default(),
+                Mesh3d(beam_mesh.clone()),
+                MeshMaterial3d(materials.add(material)),
+                NotShadowCaster,
+                Children::spawn(light_line(PointLight {
                     color: color.into(),
                     // Perf: Would like to cast shadows, but with the repeated light line hack, it's too laggy
                     //shadows_enabled: true,
                     radius: 0.25,
                     ..default()
-                }),
-                Spawn((
-                    Transform::from_scale(vec3(0.98, 0.9, 0.9)).with_translation(Vec3::X * 0.01),
-                    Mesh3d(beam_mesh),
-                    MeshMaterial3d(materials.add(material_core)),
-                )),
-            )),
-        ));
+                })),
+            ))
+            .id();
+
+        if beam.elements.contains(Element::Arcane) {
+            let material_core = StandardMaterial {
+                base_color: Color::BLACK,
+                unlit: true,
+                // depth_bias: 4_550.,
+                // depth_bias: 6_000.,
+                depth_bias: 2_250.,
+                ..default()
+            };
+            commands.entity(display_child).with_child((
+                Transform::from_scale(vec3(0.98, 0.9, 0.9)).with_translation(Vec3::X * 0.01),
+                Mesh3d(beam_mesh),
+                MeshMaterial3d(materials.add(material_core)),
+                NotShadowCaster,
+            ));
+        }
     }
 
     fn beam_mesh() -> Mesh {
@@ -389,7 +392,7 @@ mod vfx {
         beams: Query<(&Transform, &Children), With<BeamMesh>>,
         mut lights: Query<&mut PointLight, With<ChildOf>>,
     ) {
-        let lumens_per_length = 2_000_000.0 / 90.;
+        let lumens_per_length = 10_000_000.0 / 90.;
         for (beam_trans, children) in beams {
             for child in children {
                 let Ok(mut light) = lights.get_mut(*child) else {
