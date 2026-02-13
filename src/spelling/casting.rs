@@ -80,16 +80,12 @@ fn start_cast(
                 spell
             }
             CastType::Weapon => {
-                if elements.is_empty() {
-                    // TODO: Read imbued elements from weapon
-                    let imbued_elements = Magnitudes::default();
-                    let Some(spell) = spell_resolve::spell_weapon(&imbued_elements) else {
-                        return; // ???
-                    };
-                    spell
-                } else {
-                    spell_resolve::Spell::Imbue
-                }
+                // If non-empty just do spell_resolve::Spell::Imbue
+                // Otherwise read elements from weapon
+                let Some(spell) = spell_resolve::spell_weapon(&elements) else {
+                    return; // ???
+                };
+                spell
             }
             CastType::Magick => {
                 let magick = {
@@ -102,6 +98,7 @@ fn start_cast(
 
         trace!("spell is {spell:?}");
 
+        // TODO: Design a way to not define all the spell inits in one place
         match spell {
             spell_resolve::Spell::Beam => {
                 let spell = commands
@@ -130,6 +127,26 @@ fn start_cast(
                     .id();
 
                 caster.state = CasterState::Holding { cast_type, spell };
+            }
+            spell_resolve::Spell::Shield(spell_resolve::RegionWithWeapon::Circle) => {
+                // TODO: Cooldown etc
+                commands
+                    .spawn((
+                        spells::shield::shield_area(),
+                        Transform::from_translation(Vec3::Y * -1.),
+                        ChildOf(caster_entity),
+                    ))
+                    .remove_parent_in_place();
+            }
+            spell_resolve::Spell::Shield(spell_resolve::RegionWithWeapon::Line) => {
+                // TODO: Cooldown etc
+                commands
+                    .spawn((
+                        spells::shield::shield_wall(),
+                        Transform::from_translation(vec3(3.33, 0.25, 0.)),
+                        ChildOf(caster_entity),
+                    ))
+                    .remove_parent_in_place();
             }
             _ => {
                 warn!("unimplemented spell: {spell:?}");

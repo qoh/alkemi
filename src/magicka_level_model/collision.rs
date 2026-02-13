@@ -9,6 +9,7 @@ pub enum Layers {
     Default, // Layer 0 - the default layer that objects are assigned to
     Level,   // Layer 1 - static level collision
     Trigger, // Layer 2 - area triggers
+    Shield,
 }
 
 pub fn to_collider(mesh: &GenericTriangleMesh) -> Option<Collider> {

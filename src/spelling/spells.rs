@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 pub mod beam;
+pub mod shield;
 pub mod spray;
 
 // XXX: Consider using relationships here
