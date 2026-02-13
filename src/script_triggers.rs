@@ -310,6 +310,7 @@ fn execute_trigger_action(
                             spawn_transform: spawn_transform.into(),
                             scene_entity: Some(current_scene_entity),
                             model_index: None,
+                            start_as_agent: true,
                         },
                     )
                     .unwrap()

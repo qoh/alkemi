@@ -91,6 +91,7 @@ pub(crate) fn spawn_follower(
             spawn_transform,
             scene_entity: level_entity,
             model_index: None,
+            start_as_agent: true,
         },
     )??;
 
@@ -105,12 +106,6 @@ pub(crate) fn spawn_follower(
     world.entity_mut(follower).insert((
         Name::new("Follower"),
         // CameraGroupMember,
-        bevy_landmass::Agent3d::default(),
-        bevy_landmass::AgentSettings {
-            radius: nav_radius,
-            desired_speed: speed * 0.7,
-            max_speed: speed,
-        },
         bevy_landmass::AgentTarget3d::Entity(target_entity),
     ));
 
@@ -143,6 +138,7 @@ pub(crate) fn spawn_player_character(
             spawn_transform,
             scene_entity: level_entity,
             model_index: None,
+            start_as_agent: false,
         },
     )??;
 
@@ -158,8 +154,6 @@ pub(crate) fn spawn_player_character(
         crate::spelling::bindings_m1(),
         CameraGroupMember,
         crate::PlayerControlled,
-        bevy_landmass::Character::<bevy_landmass::coords::ThreeD>::default(),
-        bevy_landmass::CharacterSettings { radius: nav_radius },
     ));
 
     Ok(player_entity)
@@ -171,6 +165,7 @@ pub struct CharacterArgs {
     pub spawn_transform: Transform,
     pub scene_entity: Option<Entity>,
     pub model_index: Option<usize>,
+    pub start_as_agent: bool,
 }
 
 pub(crate) fn spawn_character(
@@ -179,6 +174,7 @@ pub(crate) fn spawn_character(
         spawn_transform,
         scene_entity: level_entity,
         model_index,
+        start_as_agent,
     }): InRef<CharacterArgs>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -236,6 +232,7 @@ pub(crate) fn spawn_character(
     phys_transform.rotation = Default::default();
     let vis_transform = Transform::from_rotation(spawn_transform.rotation);
 
+    let nav_radius = full_height * 0.5;
     let mut player = commands.spawn((
         Name::new("Character"),
         phys_transform,
@@ -250,7 +247,7 @@ pub(crate) fn spawn_character(
             speed,
             accel: 100.,
             turn_speed,
-            nav_radius: full_height * 0.5,
+            nav_radius,
         },
         CharacterDesiredMovement::default(),
     ));
@@ -264,6 +261,22 @@ pub(crate) fn spawn_character(
                 archipelago.into_inner(),
             ),
         );
+
+        if *start_as_agent {
+            player.insert((
+                bevy_landmass::Agent3d::default(),
+                bevy_landmass::AgentSettings {
+                    radius: nav_radius,
+                    desired_speed: speed * 0.7,
+                    max_speed: speed,
+                },
+            ));
+        } else {
+            player.insert((
+                bevy_landmass::Character::<bevy_landmass::coords::ThreeD>::default(),
+                bevy_landmass::CharacterSettings { radius: nav_radius },
+            ));
+        }
     }
 
     // Attach invisible shared "skeleton" model that actually plays all the animations
