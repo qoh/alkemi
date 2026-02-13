@@ -297,18 +297,34 @@ mod vfx {
             emissive_exposure_weight: -30., // -5.,
             ..default()
         };
+        let material_core = StandardMaterial {
+            base_color: Color::BLACK,
+            unlit: true,
+            // depth_bias: 4_550.,
+            // depth_bias: 6_000.,
+            depth_bias: 2_250.,
+            ..default()
+        };
+        let beam_mesh = meshes.add(beam_mesh());
         commands.entity(event.entity).with_child((
             BeamMesh::default(),
-            Mesh3d(meshes.add(beam_mesh())),
+            Mesh3d(beam_mesh.clone()),
             MeshMaterial3d(materials.add(material)),
             NotShadowCaster,
-            Children::spawn(light_line(PointLight {
-                color: color.into(),
-                // Perf: Would like to cast shadows, but with the repeated light line hack, it's too laggy
-                //shadows_enabled: true,
-                radius: 0.25,
-                ..default()
-            })),
+            Children::spawn((
+                light_line(PointLight {
+                    color: color.into(),
+                    // Perf: Would like to cast shadows, but with the repeated light line hack, it's too laggy
+                    //shadows_enabled: true,
+                    radius: 0.25,
+                    ..default()
+                }),
+                Spawn((
+                    Transform::from_scale(vec3(0.98, 0.9, 0.9)).with_translation(Vec3::X * 0.01),
+                    Mesh3d(beam_mesh),
+                    MeshMaterial3d(materials.add(material_core)),
+                )),
+            )),
         ));
     }
 
@@ -370,7 +386,7 @@ mod vfx {
 
     // TODO: This should take into account global scale
     fn adjust_light_proportion(
-        beams: Query<(&Transform, &Children)>,
+        beams: Query<(&Transform, &Children), With<BeamMesh>>,
         mut lights: Query<&mut PointLight, With<ChildOf>>,
     ) {
         let lumens_per_length = 2_000_000.0 / 90.;
