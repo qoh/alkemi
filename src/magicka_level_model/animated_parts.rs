@@ -91,7 +91,14 @@ pub(crate) fn spawn_animated_part(
         entity_commands.insert((
             RigidBody::Kinematic,
             super::collision::to_collider_raw(vertices.0.as_slice(), indices),
-            CollisionLayers::new(super::collision::Layers::Level, LayerMask::ALL),
+            CollisionLayers::new(
+                super::collision::Layers::Trigger,
+                LayerMask::ALL
+                    & !LayerMask::from(
+                        super::collision::Layers::Level.to_bits()
+                            | super::collision::Layers::Trigger.to_bits(),
+                    ),
+            ),
         ));
     }
 
