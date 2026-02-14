@@ -19,6 +19,8 @@ use crate::{
     spelling::element::Element,
 };
 
+const ACTIVATE_TIME_MAGICKA2: f32 = 0.1;
+
 const HEALTH_MAGICKA1_FORWARD: f32 = 800.;
 const HEALTH_MAGICKA1_AREA: f32 = 1000.;
 const HEALTH_MAGICKA2_FORWARD_PER_ELEMENT: f32 = 2000.;
@@ -54,7 +56,7 @@ pub fn plugin(app: &mut App) {
     let mesh_wall =
         world
             .resource_mut::<Assets<Mesh>>()
-            .add(Cuboid::new(WALL_LENGTH, WALL_HEIGHT, 0.05));
+            .add(Cuboid::new(0.05, WALL_HEIGHT, WALL_LENGTH));
 
     let mut color = crate::spelling::color::element_color(Element::Shield);
     color.blue *= 0.5;
@@ -112,7 +114,7 @@ pub fn shield_wall() -> impl Bundle {
             Layers::Shield,
             LayerMask::ALL & !(Layers::Trigger.to_bits()),
         ),
-        Collider::cuboid(WALL_LENGTH, WALL_HEIGHT, 0.05),
+        Collider::cuboid(0.05, WALL_HEIGHT, WALL_LENGTH),
         health_and_decay(
             HEALTH_MAGICKA2_LINE_PER_ELEMENT
                 * 1.

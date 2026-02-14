@@ -37,6 +37,7 @@ pub fn spray_spell(caster: Entity, elements: Magnitudes) -> impl Bundle {
 }
 
 #[derive(Component, Debug, Reflect)]
+#[require(Transform)]
 struct SpraySpell {
     pub lifetime: Timer,
     pub full_range: f32,
@@ -81,7 +82,8 @@ fn elapse_sprays(
 fn debug_draw_sprays(spells: Query<(&SpraySpell, &GlobalTransform)>, mut gizmos: Gizmos) {
     for (spell, trans) in spells {
         let current_range = current_range(spell);
-        let gizmo_trans = trans.compute_transform();
+        let gizmo_trans = trans.compute_transform()
+            * Transform::from_rotation(Quat::from_rotation_y(0.25 * std::f32::consts::TAU));
         let prim = CircularSegment::new(current_range, ARC_ANGLE);
         gizmo_circular_segment(
             &mut gizmos,
@@ -91,7 +93,7 @@ fn debug_draw_sprays(spells: Query<(&SpraySpell, &GlobalTransform)>, mut gizmos:
         );
         gizmos.line(
             trans.transform_point(Vec3::ZERO),
-            trans.transform_point(Vec3::X * current_range),
+            trans.transform_point(Vec3::NEG_Z * current_range),
             bevy::color::palettes::basic::WHITE,
         );
     }

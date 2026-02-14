@@ -150,11 +150,11 @@ fn extend_beams(beams: Query<(&mut Transform, &Beam, &BeamState)>, time: Res<Tim
             continue;
         }
         let mut length =
-            (trans.scale.x + time.delta_secs() * beam.extend_speed).max(beam.min_length);
+            (trans.scale.z + time.delta_secs() * beam.extend_speed).max(beam.min_length);
         if let Some(max) = beam.max_length {
             length = length.min(max);
         }
-        trans.map_unchanged(|t| &mut t.scale.x).set_if_neq(length);
+        trans.map_unchanged(|t| &mut t.scale.z).set_if_neq(length);
     }
 }
 
@@ -167,8 +167,8 @@ fn collide_beams(
     for (mut state, beam_ent, beam) in beams {
         let beam_trans = transform_helper.compute_global_transform(beam_ent).unwrap();
         let origin = beam_trans.translation();
-        let direction = beam_trans.rotation() * Dir3::X;
-        let max_distance = beam_trans.scale().x;
+        let direction = beam_trans.rotation() * Dir3::NEG_Z;
+        let max_distance = beam_trans.scale().z;
         let filter = SpatialQueryFilter {
             mask: LayerMask::ALL & !(Layers::Trigger.to_bits()),
             excluded_entities: beam.ignore_entity.iter().copied().collect(),
@@ -191,7 +191,7 @@ fn collide_beams(
 fn shrink_colliding_beams(beams: Query<(&mut Transform, &BeamState), Changed<BeamState>>) {
     for (mut trans, beam) in beams {
         if let Some(collision) = &beam.colliding {
-            trans.scale.x = collision.distance;
+            trans.scale.z = collision.distance;
         }
     }
 }
@@ -219,7 +219,7 @@ fn shorten_despawn_stopped_beams(
             state.filter_map_unchanged(|b| b.stopping_length_removed.as_mut())
         {
             *removed += time.delta_secs() * beam.extend_speed;
-            if *removed >= trans.scale.x {
+            if *removed >= trans.scale.z {
                 commands.entity(entity).try_despawn();
             }
         }
@@ -324,7 +324,7 @@ mod vfx {
                 ..default()
             };
             commands.entity(display_child).with_child((
-                Transform::from_scale(vec3(0.98, 0.9, 0.9)).with_translation(Vec3::X * 0.01),
+                Transform::from_scale(vec3(0.9, 0.9, 0.98)).with_translation(Vec3::NEG_Z * 0.01),
                 Mesh3d(beam_mesh),
                 MeshMaterial3d(materials.add(material_core)),
                 NotShadowCaster,
@@ -333,14 +333,14 @@ mod vfx {
     }
 
     fn beam_mesh() -> Mesh {
-        // Cylinder creates meshes that point +Y, but beams are +X
-        let y_to_x = Quat::from_mat3(&Mat3::from_cols(-Vec3::Y, Vec3::X, Vec3::Z));
+        // Cylinder creates meshes that point +Y, but beams are -Z
+        let y_to_neg_z = Quat::from_mat3(&Mat3::from_cols(-Vec3::Z, Vec3::X, Vec3::Y));
         Cylinder::new(BEAM_RADIUS, 1.)
             .mesh()
             .anchor(bevy::mesh::CylinderAnchor::Bottom)
             // TODO: Round caps that don't stretch with length - likely want .without_caps()
             .build()
-            .rotated_by(y_to_x)
+            .rotated_by(y_to_neg_z)
     }
 
     /// As a workaround for the absence of capsule lights, spawn a line of point lights
@@ -348,7 +348,7 @@ mod vfx {
         let lights = (0..LIGHTS).map(move |i| {
             let t = (i as f32 + 0.5) / (LIGHTS as f32);
             (
-                Transform::from_translation(t * Vec3::X),
+                Transform::from_translation(t * Vec3::NEG_Z),
                 defaults,
                 // PhasingLight { phase_offset: t },
             )
@@ -373,18 +373,18 @@ mod vfx {
                     .sample_clamped(1. - (1. - open_t).powi(2))
                     .powi(2);
             if let Some(length_removed) = beam.stopping_length_removed {
-                let length = beam_trans.scale.x;
+                let length = beam_trans.scale.z;
                 let t = (length_removed / length).min(1.);
-                trans.translation.x = t;
-                trans.scale.x = 1. - t;
+                trans.translation.z = -t;
+                trans.scale.z = 1. - t;
                 width = (1. - t).powi(3).min(width);
             }
             let pulse_variance = width * 0.025;
             let pulse_phase =
                 (mesh_state.elapsed.elapsed_secs().fract() * std::f32::consts::TAU).cos();
             width *= 1. + (pulse_phase * pulse_variance);
+            trans.scale.x = width;
             trans.scale.y = width;
-            trans.scale.z = width;
         }
     }
 
@@ -399,7 +399,7 @@ mod vfx {
                 let Ok(mut light) = lights.get_mut(*child) else {
                     continue;
                 };
-                let beam_length = beam_trans.scale.x;
+                let beam_length = beam_trans.scale.z;
                 let light_length = beam_length / (LIGHTS as f32);
                 light.intensity = lumens_per_length * light_length;
                 // Perf: For short beams, could aggressively fade out odd index lights and hide them
@@ -415,7 +415,7 @@ mod vfx {
         }
         for (mut trans, phasing) in lights {
             let phase = (phasing.phase_offset + (time.elapsed_secs_wrapped() / period)).fract();
-            trans.translation.x = phase;
+            trans.translation.z = -phase;
         }
     }
 }
