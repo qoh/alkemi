@@ -246,6 +246,7 @@ mod vfx {
     use bevy::{light::NotShadowCaster, prelude::*, time::Stopwatch};
 
     pub fn plugin(app: &mut App) {
+        let _ = app.try_register_required_components::<Beam, Visibility>();
         app.add_observer(add_beam_mesh);
         app.add_systems(
             Update,

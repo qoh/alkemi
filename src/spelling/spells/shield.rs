@@ -40,6 +40,9 @@ pub fn plugin(app: &mut App) {
     app.add_observer(despawn_dead_shield);
     app.add_observer(collapse_intersecting_shields);
 
+    // Presentation/VFX
+
+    let _ = app.try_register_required_components::<Shield, Visibility>();
     app.add_observer(spawn_collapse_effect);
     app.add_systems(Update, fade_lights);
 
