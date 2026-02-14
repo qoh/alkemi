@@ -1,22 +1,22 @@
-use crate::gameplay::damage::Health;
-use crate::magicka_level_model::Locator;
-use crate::{camera::CameraGroupMember, magicka_assets::skinned_model::AnimationLibrary};
+use crate::{
+    character::model::attach_model, gameplay::damage::Health,
+    magicka_assets::skinned_model::AnimationLibrary,
+};
 use avian3d::prelude::*;
-use bevy::ecs::system::SystemState;
-use bevy::input::InputSystems;
 use bevy::prelude::*;
 use remagic::xnb_readers::magicka_character::CharacterTemplate;
 use std::ffi::OsStr;
-use typed_path::{PlatformPath, PlatformPathBuf};
+use typed_path::PlatformPathBuf;
+
+mod agent;
+mod model;
+mod player;
+
+pub(crate) use agent::spawn_follower;
+pub(crate) use player::spawn_player_character;
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(PreUpdate, player_walk.after(InputSystems));
-    app.add_systems(
-        FixedUpdate,
-        agent_walk
-            .after(bevy_landmass::LandmassSystems::Output)
-            .before(character_walk),
-    );
+    app.add_plugins((model::plugin, agent::plugin, player::plugin));
     app.add_systems(FixedUpdate, character_walk);
     app.add_systems(
         PostUpdate,
@@ -30,7 +30,6 @@ pub fn plugin(app: &mut App) {
         )
             .chain(),
     );
-    app.add_systems(PostUpdate, copy_skinnedmesh_from_source);
 }
 
 #[derive(Component, Debug)]
@@ -39,7 +38,6 @@ pub struct Character {
     pub speed: f32,
     pub accel: f32,
     pub turn_speed: f32,
-    pub nav_radius: f32,
 }
 
 #[derive(Component, Default, Debug, Reflect)]
@@ -62,104 +60,6 @@ pub struct CharacterAnimationState {
 #[derive(Component, Debug, Reflect)]
 pub struct FaceParentDir;
 
-pub(crate) fn spawn_follower(
-    (In(level_entity), InRef(spawn_point_basename), In(target_entity)): (
-        In<Option<Entity>>,
-        InRef<str>,
-        In<Entity>,
-    ),
-    world: &mut World,
-    locators: &mut QueryState<(&Name, Entity), With<Locator>>,
-    global_transforms: &mut SystemState<TransformHelper>,
-) -> Result {
-    let player_index = 1;
-
-    let (_, spawn_entity) = locators
-        .query(world)
-        .iter()
-        .find(|(n, _)| n.as_str() == format!("{}{}", spawn_point_basename, player_index))
-        .unwrap();
-    let spawn_transform = Transform::from(
-        global_transforms
-            .get(world)
-            .compute_global_transform(spawn_entity)?,
-    );
-
-    let follower = world.run_system_cached_with::<_, Result<_>, _, _>(
-        spawn_character,
-        &CharacterArgs {
-            type_name: "Wizard_Reddit".to_owned(),
-            spawn_transform,
-            scene_entity: level_entity,
-            model_index: None,
-            start_as_agent: true,
-        },
-    )??;
-
-    let mut character_world = world.entity_mut(follower);
-    let mut character_component = character_world.get_mut::<Character>().unwrap();
-    character_component.accel = 12.;
-
-    let Character {
-        speed, nav_radius, ..
-    } = *character_component;
-
-    world.entity_mut(follower).insert((
-        Name::new("Follower"),
-        // CameraGroupMember,
-        bevy_landmass::AgentTarget3d::Entity(target_entity),
-    ));
-
-    Ok(())
-}
-
-pub(crate) fn spawn_player_character(
-    (In(level_entity), InRef(spawn_point_basename)): (In<Option<Entity>>, InRef<str>),
-    world: &mut World,
-    locators: &mut QueryState<(&Name, Entity), With<Locator>>,
-    global_transforms: &mut SystemState<TransformHelper>,
-) -> Result<Entity> {
-    let player_index = 0;
-
-    let (_, spawn_entity) = locators
-        .query(world)
-        .iter()
-        .find(|(n, _)| n.as_str() == format!("{}{}", spawn_point_basename, player_index))
-        .unwrap();
-    let spawn_transform = Transform::from(
-        global_transforms
-            .get(world)
-            .compute_global_transform(spawn_entity)?,
-    );
-
-    let player_entity = world.run_system_cached_with::<_, Result<_>, _, _>(
-        spawn_character,
-        &CharacterArgs {
-            type_name: "Wizard".to_owned(),
-            spawn_transform,
-            scene_entity: level_entity,
-            model_index: None,
-            start_as_agent: false,
-        },
-    )??;
-
-    let mut character_world = world.entity_mut(player_entity);
-    let mut character_component = character_world.get_mut::<Character>().unwrap();
-    character_component.type_name = "wizard".to_string(); // For scene triggers
-
-    let nav_radius = character_component.nav_radius;
-
-    world.entity_mut(player_entity).insert((
-        Name::new(format!("Player {player_index}")),
-        crate::spelling::bundle_m1(),
-        crate::spelling::bindings_m1(),
-        CameraGroupMember,
-        crate::PlayerControlled,
-    ));
-
-    Ok(player_entity)
-}
-
 #[derive(Debug)]
 pub struct CharacterArgs {
     pub type_name: String,
@@ -178,8 +78,8 @@ pub(crate) fn spawn_character(
         start_as_agent,
     }): InRef<CharacterArgs>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
     nav_mesh_archipelago: Option<
         Single<Entity, With<bevy_landmass::Archipelago<bevy_landmass::coords::ThreeD>>>,
     >,
@@ -219,7 +119,7 @@ pub(crate) fn spawn_character(
         mass,
         speed,
         turn_speed,
-        ref skinned_models,
+        skinned_models: _,
         ref animation_sets,
     } = template;
 
@@ -234,7 +134,6 @@ pub(crate) fn spawn_character(
     phys_transform.rotation = Default::default();
     let vis_transform = Transform::from_rotation(spawn_transform.rotation);
 
-    let nav_radius = full_height * 0.5;
     let mut player = commands.spawn((
         Name::new("Character"),
         phys_transform,
@@ -250,7 +149,6 @@ pub(crate) fn spawn_character(
             speed,
             accel: 100.,
             turn_speed,
-            nav_radius,
         },
         CharacterDesiredMovement::default(),
     ));
@@ -258,7 +156,10 @@ pub(crate) fn spawn_character(
     if let Some(level_entity) = level_entity {
         player.insert(ChildOf(*level_entity));
     }
+
     if let Some(archipelago) = nav_mesh_archipelago {
+        let nav_radius = full_height * 0.5;
+
         player.insert(
             bevy_landmass::ArchipelagoRef::<bevy_landmass::coords::ThreeD>::new(
                 archipelago.into_inner(),
@@ -282,149 +183,28 @@ pub(crate) fn spawn_character(
         }
     }
 
-    // Attach invisible shared "skeleton" model that actually plays all the animations
-    let skeleton_scene = load_model(
-        &mut meshes,
-        &mut materials,
-        &assets,
+    let attached_model = attach_model(
         content_path.as_path(),
-        skinned_models.1.path.as_str(),
+        &template,
+        model_index,
+        player.reborrow(),
+        vis_transform,
+        meshes.into(),
+        materials.into(),
+        &assets,
     );
-    let skeleton_ent = player
-        .commands_mut()
-        .spawn((
-            ChildOf(player_entity),
-            Transform::from_translation(Vec3::Y * -0.5 * full_height) * vis_transform,
-            FaceParentDir,
-            SceneRoot(skeleton_scene),
-            Visibility::Hidden,
-        ))
-        .id();
+
     player.insert(CharacterAnimationState {
         base_animation: "idle",
         force_animation: None,
-        animation_skeleton: skeleton_ent,
+        animation_skeleton: attached_model.skeleton,
         currently_playing: None,
         animation_set_index: 0,
         // HACK: The character should really refer to the character template with an asset handle instead
         animation_sets: animation_sets.clone(),
     });
 
-    // Attach visible model that reflects the animation of the invisible one
-    let visual_scene = load_model(
-        &mut meshes,
-        &mut materials,
-        &assets,
-        content_path.as_path(),
-        skinned_models.0[model_index].0.path.as_str(),
-    );
-    player.with_child((SceneRoot(visual_scene), CopiesSkinnedMeshFrom(skeleton_ent)));
-
     Ok(player_entity)
-}
-
-fn load_model(
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    assets: &AssetServer,
-    content_path: &PlatformPath,
-    relative_path: &str,
-) -> Handle<Scene> {
-    let relative_path = typed_path::WindowsPathBuf::from(relative_path);
-    let model_content_path = content_path.parent().unwrap().join(
-        relative_path
-            .with_platform_encoding_checked()
-            .unwrap()
-            .as_bytes(),
-    );
-    let mut model_path = crate::magicka_assets::content_root()
-        .join_checked(&model_content_path)
-        .unwrap();
-    model_path.set_extension("xnb");
-
-    let model_path = std::path::Path::new(model_path.as_ref() as &OsStr);
-    let bytes = crate::magicka_assets::read_ignore_path_ascii_case(model_path).unwrap();
-    let xnb_asset = remagic::parse_skinned_model(&bytes)
-        .map_err(|e| e.into_inner())
-        .unwrap();
-    let skinned_mesh = xnb_asset.inner().as_ref().unwrap();
-
-    assets.add(crate::magicka_assets::skinned_model::load_skinned_model(
-        skinned_mesh,
-        &xnb_asset,
-        model_content_path.as_ref(),
-        meshes,
-        materials,
-        &assets,
-    ))
-}
-
-/// All descendant SkinnedMesh components will be replaced once with
-/// the first descendant SkinnedMesh component on the target entity.
-#[derive(Component, Debug)]
-#[relationship(relationship_target = CopiesSkinnedMeshTo)]
-struct CopiesSkinnedMeshFrom(Entity);
-
-#[derive(Component, Debug)]
-#[relationship_target(relationship = CopiesSkinnedMeshFrom)]
-struct CopiesSkinnedMeshTo(Vec<Entity>);
-
-fn copy_skinnedmesh_from_source(
-    sources: Query<Option<&bevy::scene::SceneInstance>, With<CopiesSkinnedMeshTo>>,
-    targets: Query<(
-        Entity,
-        &CopiesSkinnedMeshFrom,
-        Option<&bevy::scene::SceneInstance>,
-    )>,
-    mut skinned_meshes: Query<&mut bevy::mesh::skinning::SkinnedMesh>,
-    children: Query<&Children>,
-    scene_spawner: Res<SceneSpawner>,
-    mut commands: Commands,
-) {
-    for (target, target_source, target_scene) in targets {
-        // If the target is an instanced scene, wait for it to become ready
-        if let Some(instance) = target_scene
-            && !scene_spawner.instance_is_ready(**instance)
-        {
-            continue;
-        }
-
-        let source = target_source.0;
-        let source_scene = sources.get(source).unwrap();
-        // If the source is an instanced scene, wait for it to become ready
-        if let Some(instance) = source_scene
-            && !scene_spawner.instance_is_ready(**instance)
-        {
-            continue;
-        }
-
-        // Grab the first available SkinnedMesh in tree order
-        let mut source_skinned_mesh = None;
-        for child in children.iter_descendants(source) {
-            if let Ok(skinned_mesh) = skinned_meshes.get(child) {
-                source_skinned_mesh = Some(skinned_mesh.clone());
-                break;
-            }
-        }
-
-        // If there was none, sad
-        let Some(source_skinned_mesh) = source_skinned_mesh else {
-            warn_once!("No skinned mesh config to copy from source");
-            // Give up
-            commands.entity(target).remove::<CopiesSkinnedMeshFrom>();
-            continue;
-        };
-
-        // Replace all target SkinnedMeshes with it
-        for child in children.iter_descendants(target) {
-            if let Ok(mut skinned_mesh) = skinned_meshes.get_mut(child) {
-                *skinned_mesh = source_skinned_mesh.clone();
-            }
-        }
-
-        // Success, don't check anymore
-        commands.entity(target).remove::<CopiesSkinnedMeshFrom>();
-    }
 }
 
 fn select_animation(
@@ -536,44 +316,6 @@ fn model_face_dir(
                     .interpolate_stable(&want_rot, time.delta_secs() * char.turn_speed);
             }
         }
-    }
-}
-
-fn agent_walk(
-    agents: Query<(
-        &bevy_landmass::AgentDesiredVelocity3d,
-        &Character,
-        &mut CharacterDesiredMovement,
-    )>,
-) {
-    for (target_velocity, char, mut movement) in agents {
-        movement.movement =
-            (target_velocity.velocity().with_y(0.) / char.speed).clamp_length_max(1.);
-    }
-}
-
-fn player_walk(
-    players: Query<&mut CharacterDesiredMovement, (With<crate::PlayerControlled>)>,
-    kb_input: Res<ButtonInput<KeyCode>>,
-) {
-    let mut direction = Vec2::ZERO;
-    if kb_input.pressed(KeyCode::KeyW) {
-        direction.y -= 1.;
-    }
-    if kb_input.pressed(KeyCode::KeyS) {
-        direction.y += 1.;
-    }
-    if kb_input.pressed(KeyCode::KeyA) {
-        direction.x -= 1.;
-    }
-    if kb_input.pressed(KeyCode::KeyD) {
-        direction.x += 1.;
-    }
-
-    let direction = direction.normalize_or_zero().extend(0.).xzy();
-
-    for mut movement in players {
-        movement.movement = direction;
     }
 }
 
