@@ -33,7 +33,9 @@ pub struct CharacterTemplate {
     pub attached_sounds: Vec<(String, i32)>, // (key, banks)
     pub gibs: Vec<(ExternalReference<Model>, f32, f32)>, // (model, mass, scale)
     pub lights: Vec<(String, String, Vector3, Vector3, f32, u8, f32, f32)>, // (joint_name, radius, diffuse_color, ambient_color, specular_amount, variation_type, variation_amount, variation_speed)
+    */
     pub max_hitpoints: f32,
+    /*
     pub number_of_healthbars: i32,
     pub undying: bool,
     pub undie_time: f32,
@@ -140,7 +142,12 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
                 f32,
             ),
         ),
-        f32,  // max_hitpoints
+    )
+        .parse_next(input)?;
+
+    let max_hitpoints = f32.parse_next(input)?;
+
+    let _ = (
         i32,  // number_of_healthbars
         bool, // undying
         f32,  // undie_time
@@ -241,6 +248,7 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
     Ok(CharacterTemplate {
         id,
         display_id,
+        max_hitpoints,
         length,
         radius,
         mass,

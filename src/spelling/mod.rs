@@ -3,7 +3,7 @@ mod chanting;
 mod chanting_ui;
 mod chanting_vfx;
 mod color;
-mod element;
+pub(crate) mod element;
 mod input;
 mod spell_resolve;
 mod spells;

@@ -1,3 +1,4 @@
+use crate::gameplay::damage::Health;
 use crate::magicka_level_model::Locator;
 use crate::{camera::CameraGroupMember, magicka_assets::skinned_model::AnimationLibrary};
 use avian3d::prelude::*;
@@ -212,6 +213,7 @@ pub(crate) fn spawn_character(
     let CharacterTemplate {
         id: _, // This is the type="" for triggers, unless this is for a player, where it's overridden to "wizard"
         display_id: _,
+        max_hitpoints,
         length,
         radius,
         mass,
@@ -242,6 +244,7 @@ pub(crate) fn spawn_character(
         Mass(mass),
         LockedAxes::ROTATION_LOCKED,
         TransformInterpolation,
+        Health::full(max_hitpoints),
         Character {
             type_name: template_name.clone(),
             speed,

@@ -1,6 +1,7 @@
 mod camera;
 mod character;
 mod dev;
+mod gameplay;
 mod magicka_assets;
 mod magicka_level_model;
 mod magicka_scene;
@@ -39,6 +40,7 @@ fn main() -> AppExit {
         camera::plugin,
         character::plugin,
         script_triggers::plugin,
+        gameplay::plugin,
         spelling::plugin,
     ));
     app.add_systems(PreUpdate, update_cursor_grab);
