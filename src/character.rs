@@ -18,10 +18,7 @@ pub(crate) use player::spawn_player_character;
 pub fn plugin(app: &mut App) {
     app.add_plugins((model::plugin, agent::plugin, player::plugin));
     app.add_systems(FixedUpdate, character_walk);
-    app.add_systems(
-        PostUpdate,
-        model_face_dir.before(TransformSystems::Propagate),
-    );
+    app.add_systems(FixedUpdate, face_move_dir.in_set(PhysicsSystems::Last));
     app.add_systems(
         PostUpdate,
         (
@@ -56,9 +53,6 @@ pub struct CharacterAnimationState {
     animation_sets: Vec<remagic::xnb_readers::magicka_character::AnimationSet>,
     animation_set_index: usize,
 }
-
-#[derive(Component, Debug, Reflect)]
-pub struct FaceParentDir;
 
 #[derive(Debug)]
 pub struct CharacterArgs {
@@ -127,16 +121,9 @@ pub(crate) fn spawn_character(
 
     let full_height = length + radius * 2.;
 
-    // HACK?: It would easier to rotate the root with the collider itself,
-    // but that seems to cause jittery movement
-    // Maybe Avian thinks I'm teleporting the character when setting
-    let mut phys_transform = *spawn_transform;
-    phys_transform.rotation = Default::default();
-    let vis_transform = Transform::from_rotation(spawn_transform.rotation);
-
     let mut player = commands.spawn((
         Name::new("Character"),
-        phys_transform,
+        *spawn_transform,
         Visibility::default(),
         RigidBody::Dynamic,
         Collider::capsule(radius, length),
@@ -188,7 +175,7 @@ pub(crate) fn spawn_character(
         &template,
         model_index,
         player.reborrow(),
-        vis_transform,
+        Transform::default(),
         meshes.into(),
         materials.into(),
         &assets,
@@ -299,22 +286,17 @@ fn character_play_animation(
     }
 }
 
-fn model_face_dir(
-    facers: Query<(&mut Transform, &ChildOf), (With<FaceParentDir>, Without<Character>)>,
-    mut parents: Query<(&mut Transform, &CharacterDesiredMovement, &Character)>,
+fn face_move_dir(
+    characters: Query<(&mut Transform, &CharacterDesiredMovement, &Character)>,
     time: Res<Time>,
 ) {
-    for (mut transform, parent) in facers {
-        if let Ok((mut parent_trans, movement, char)) = parents.get_mut(parent.parent()) {
-            let (dir, speed_scale) = movement.movement.normalize_and_length();
-            if speed_scale > 0.01 {
-                let want_rot = Quat::look_to_rh(dir, Vec3::Y).inverse();
-                // Would like to set parent_trans instead, simpler
-                // let max_angle
-                transform.rotation = transform
-                    .rotation
-                    .interpolate_stable(&want_rot, time.delta_secs() * char.turn_speed);
-            }
+    for (mut trans, movement, char) in characters {
+        let (dir, speed_scale) = movement.movement.normalize_and_length();
+        if speed_scale > 0.01 {
+            let want_rot = Quat::look_to_rh(dir, Vec3::Y).inverse();
+            trans.rotation = trans
+                .rotation
+                .interpolate_stable(&want_rot, time.delta_secs() * char.turn_speed);
         }
     }
 }

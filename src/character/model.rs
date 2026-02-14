@@ -1,4 +1,3 @@
-use crate::character::FaceParentDir;
 use bevy::prelude::*;
 use remagic::xnb_readers::magicka_character::CharacterTemplate;
 use std::ffi::OsStr;
@@ -47,7 +46,6 @@ pub(super) fn attach_model(
         .spawn((
             ChildOf(player_entity),
             Transform::from_translation(Vec3::Y * -0.5 * full_height) * relative_transform,
-            FaceParentDir,
             SceneRoot(skeleton_scene),
             Visibility::Hidden,
         ))

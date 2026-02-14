@@ -98,6 +98,10 @@ fn start_cast(
 
         trace!("spell is {spell:?}");
 
+        // FIXME: Spells face +X instead of -Z as used by Bevy & Magicka 1 & Bevy (but what about MWW/M2?)
+        let transform_adjusted =
+            Transform::from_rotation(Quat::from_rotation_y(0.25 * std::f32::consts::TAU));
+
         // TODO: Design a way to not define all the spell inits in one place
         match spell {
             spell_resolve::Spell::Beam => {
@@ -108,7 +112,7 @@ fn start_cast(
                             caster: caster_entity,
                         },
                         spells::beam::beam_spell(caster_entity, elements),
-                        Transform::from_rotation(Quat::from_rotation_y(0.3)),
+                        transform_adjusted,
                     ))
                     .id();
 
@@ -122,7 +126,7 @@ fn start_cast(
                             caster: caster_entity,
                         },
                         spells::spray::spray_spell(caster_entity, elements),
-                        Transform::from_rotation(Quat::from_rotation_y(0.3)),
+                        transform_adjusted,
                     ))
                     .id();
 
@@ -133,7 +137,7 @@ fn start_cast(
                 commands
                     .spawn((
                         spells::shield::shield_area(),
-                        Transform::from_translation(Vec3::Y * -1.),
+                        transform_adjusted * Transform::from_translation(Vec3::Y * -1.),
                         ChildOf(caster_entity),
                     ))
                     .remove_parent_in_place();
@@ -143,7 +147,7 @@ fn start_cast(
                 commands
                     .spawn((
                         spells::shield::shield_wall(),
-                        Transform::from_translation(vec3(3.33, 0.25, 0.)),
+                        transform_adjusted * Transform::from_translation(vec3(3.33, 0.25, 0.)),
                         ChildOf(caster_entity),
                     ))
                     .remove_parent_in_place();
