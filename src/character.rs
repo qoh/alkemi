@@ -17,8 +17,10 @@ pub(crate) use player::spawn_player_character;
 
 pub fn plugin(app: &mut App) {
     app.add_plugins((model::plugin, agent::plugin, player::plugin));
-    app.add_systems(FixedUpdate, character_walk);
-    app.add_systems(FixedUpdate, face_move_dir.in_set(PhysicsSystems::Last));
+    app.add_systems(
+        FixedUpdate,
+        (character_walk, turn_to_direction).before(PhysicsSystems::First),
+    );
     app.add_systems(
         PostUpdate,
         (
@@ -41,6 +43,8 @@ pub struct Character {
 pub struct CharacterDesiredMovement {
     /// Magnitude 1 means max speed
     pub movement: Vec3,
+    /// If zero, character will not try to turn. Otherwise, _must_ be normalized.
+    pub direction: Vec3,
 }
 
 #[derive(Component, Debug, Reflect)]
@@ -161,6 +165,7 @@ pub(crate) fn spawn_character(
                     desired_speed: speed * 0.7,
                     max_speed: speed,
                 },
+                agent::FaceMoveDir,
             ));
         } else {
             player.insert((
@@ -286,17 +291,19 @@ fn character_play_animation(
     }
 }
 
-fn face_move_dir(
+fn turn_to_direction(
     characters: Query<(&mut Transform, &CharacterDesiredMovement, &Character)>,
     time: Res<Time>,
 ) {
     for (mut trans, movement, char) in characters {
-        let (dir, speed_scale) = movement.movement.normalize_and_length();
-        if speed_scale > 0.01 {
-            let want_rot = Quat::look_to_rh(dir, Vec3::Y).inverse();
-            trans.rotation = trans
+        if movement.direction != Vec3::ZERO {
+            let want_rot = Quat::look_to_rh(movement.direction, Vec3::Y).inverse();
+            let new_rot = trans
                 .rotation
                 .interpolate_stable(&want_rot, time.delta_secs() * char.turn_speed);
+            if new_rot != trans.rotation {
+                trans.rotation = new_rot;
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::character::{
     Character, CharacterArgs, CharacterDesiredMovement, character_walk,
     player::{SpawnLocatorsQuery, find_spawn_transform},
-    spawn_character,
+    spawn_character, turn_to_direction,
 };
 use bevy::{
     ecs::system::{SystemParam, SystemState},
@@ -15,6 +15,7 @@ pub fn plugin(app: &mut App) {
             .after(bevy_landmass::LandmassSystems::Output)
             .before(character_walk),
     );
+    app.add_systems(FixedUpdate, face_move_dir.before(turn_to_direction));
 }
 
 pub fn spawn_follower(
@@ -58,6 +59,9 @@ pub fn spawn_follower(
     Ok(())
 }
 
+#[derive(Component, Default, Debug)]
+pub struct FaceMoveDir;
+
 fn agent_walk(
     agents: Query<(
         &bevy_landmass::AgentDesiredVelocity3d,
@@ -68,5 +72,19 @@ fn agent_walk(
     for (target_velocity, char, mut movement) in agents {
         movement.movement =
             (target_velocity.velocity().with_y(0.) / char.speed).clamp_length_max(1.);
+    }
+}
+
+fn face_move_dir(
+    facers: Query<
+        &mut CharacterDesiredMovement,
+        (With<FaceMoveDir>, Changed<CharacterDesiredMovement>),
+    >,
+) {
+    for mut movement in facers {
+        let dir = movement.movement.normalize_or_zero();
+        if movement.direction != dir {
+            movement.direction = dir;
+        }
     }
 }

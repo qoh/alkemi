@@ -36,6 +36,10 @@ impl Default for CameraSensitivity {
     }
 }
 
+/// The camera to use for controlling players that face the pointer.
+#[derive(Component, Default, Debug, Clone, Copy)]
+pub struct PlayerPointerCamera;
+
 pub(crate) fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("Camera"),
@@ -57,6 +61,7 @@ pub(crate) fn spawn_camera(mut commands: Commands) {
             position: default(),
             magnify: 1.,
         },
+        PlayerPointerCamera,
     ));
 }
 
