@@ -16,7 +16,7 @@ use crate::{
         damage_over_time::{self, DamageOverTime},
     },
     magicka_level_model::Layers,
-    spelling::element::Element,
+    spelling::{element::Element, spells::beam::ReflectBeams},
 };
 
 const ACTIVATE_TIME_MAGICKA2: f32 = 0.1;
@@ -96,6 +96,7 @@ pub fn shield_area() -> impl Bundle {
         Shield {
             shape: Shape::Sphere,
         },
+        // FIXME: Reflected beam normals aren't continuous
         Collider::sphere(DIAMETER / 2.),
         health_and_decay(HEALTH_MAGICKA1_AREA),
     )
@@ -137,6 +138,7 @@ fn health_and_decay(health: f32) -> impl Bundle {
         Layers::Shield,
         LayerMask::ALL & !(Layers::Level.to_bits() | Layers::Trigger.to_bits()),
     ),
+    ReflectBeams,
 )]
 #[component(on_add = Self::on_add)]
 pub struct Shield {

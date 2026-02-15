@@ -27,6 +27,16 @@ pub fn plugin(app: &mut App) {
         )
             .chain(),
     );
+    app.add_systems(
+        FixedUpdate,
+        (
+            stop_reflected_beams,
+            reflect_colliding_beams,
+            position_reflected_beams,
+        )
+            .chain()
+            .after(collide_beams),
+    );
     app.add_observer(release_channeling_beam);
     app.add_observer(stop_beam);
     app.add_plugins(vfx::plugin);
@@ -82,7 +92,7 @@ fn timeout_beams(
     }
 }
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Clone, Reflect)]
 #[require(BeamState, Transform)]
 pub struct Beam {
     pub elements: Magnitudes,
@@ -123,9 +133,17 @@ struct BeamState {
 
 #[derive(Debug, Reflect)]
 struct BeamCollision {
+    pub ray: Ray3d,
     pub distance: f32,
     pub normal: Vec3,
     pub entity: Entity,
+    pub reflected_beam: Option<Entity>,
+}
+
+impl BeamCollision {
+    pub fn point(&self) -> Vec3 {
+        self.ray.get_point(self.distance)
+    }
 }
 
 impl Default for BeamState {
@@ -142,6 +160,18 @@ impl BeamState {
     fn stopping(&self) -> bool {
         self.stopping_length_removed.is_some()
     }
+}
+
+/// Reflects beams that hit it.
+#[derive(Component, Default, Clone, Copy, Debug)]
+pub struct ReflectBeams;
+
+/// A beam that has been reflected.
+#[derive(Component, Clone, Copy, Debug)]
+struct ReflectedBeam {
+    pub reflections: usize,
+    pub source_beam: Entity,
+    //pub reflector: Entity,
 }
 
 fn extend_beams(beams: Query<(&mut Transform, &Beam, &BeamState)>, time: Res<Time>) {
@@ -164,11 +194,27 @@ fn collide_beams(
     transform_helper: TransformHelper,
     spatial_query: SpatialQuery,
 ) {
+    // This is mainly to prevent reflected beams from hitting their original reflector
+    // For players, prefer BeamState::ignore_entity
+    let min_distance = 0.1;
+
+    let repeat_collision_margin = 0.1;
+
     for (mut state, beam_ent, beam) in beams {
         let beam_trans = transform_helper.compute_global_transform(beam_ent).unwrap();
-        let origin = beam_trans.translation();
+        let length = beam_trans.scale().z;
+        // If we collided last update and haven't shrunk further, cast a bit further to ensure a chance to re-hit, just in case
+        let modified_length = if let Some(last) = &state.colliding
+            && length - last.distance >= -0.0001
+        {
+            length.max(last.distance + repeat_collision_margin)
+        } else {
+            length
+        };
+
         let direction = beam_trans.rotation() * Dir3::NEG_Z;
-        let max_distance = beam_trans.scale().z;
+        let origin = beam_trans.translation() + min_distance * direction;
+        let max_distance = modified_length - min_distance;
         let filter = SpatialQueryFilter {
             mask: LayerMask::ALL & !(Layers::Trigger.to_bits()),
             excluded_entities: beam.ignore_entity.iter().copied().collect(),
@@ -181,9 +227,17 @@ fn collide_beams(
             continue;
         };
         state.colliding = Some(BeamCollision {
+            ray: Ray3d::new(origin, direction),
             distance: hit.distance,
             normal: hit.normal,
             entity: hit.entity,
+            reflected_beam: state.colliding.as_ref().and_then(|prev| {
+                if prev.entity == hit.entity {
+                    prev.reflected_beam
+                } else {
+                    None
+                }
+            }),
         });
     }
 }
@@ -223,6 +277,115 @@ fn shorten_despawn_stopped_beams(
                 commands.entity(entity).try_despawn();
             }
         }
+    }
+}
+
+fn stop_reflected_beams(
+    reflected_beams: Query<(Entity, &ReflectedBeam)>,
+    beams: Query<&BeamState>,
+    mut commands: Commands,
+) {
+    for (reflected_beam, reflection) in reflected_beams {
+        let still_reflected = 'check: {
+            let Ok(BeamState {
+                colliding:
+                    Some(BeamCollision {
+                        reflected_beam: Some(source_reflected_beam),
+                        ..
+                    }),
+                ..
+            }) = beams.get(reflection.source_beam)
+            else {
+                break 'check false;
+            };
+            reflected_beam == *source_reflected_beam
+        };
+
+        if !still_reflected {
+            commands.entity(reflected_beam).remove::<ReflectedBeam>();
+            commands.trigger(Stop(reflected_beam));
+        }
+    }
+}
+
+fn reflect_colliding_beams(
+    beams: Query<(Entity, &mut BeamState, &Beam, Option<&ReflectedBeam>), Changed<BeamState>>,
+    reflectors: Query<(), With<ReflectBeams>>,
+    mut commands: Commands,
+) {
+    let only_explicit_reflectors = true;
+
+    for (source_beam, state, beam, already_reflected) in beams {
+        if let Some(mut collision) = state.filter_map_unchanged(|s| s.colliding.as_mut())
+            && collision.reflected_beam.is_none()
+        {
+            if only_explicit_reflectors && !reflectors.contains(collision.entity) {
+                continue;
+            }
+
+            let reflected_beam = commands
+                .spawn((
+                    Beam {
+                        //ignore_entity: Some(collision.entity),
+                        ignore_entity: None,
+                        min_length: (beam.min_length - collision.distance).max(0.),
+                        max_length: beam.max_length.map(|l| (l - collision.distance).max(0.)),
+                        ..beam.clone()
+                    },
+                    ReflectedBeam {
+                        reflections: already_reflected.map(|r| r.reflections).unwrap_or(0) + 1,
+                        source_beam,
+                        //reflector: collision.entity,
+                    },
+                ))
+                .id();
+            collision.reflected_beam = Some(reflected_beam);
+        }
+    }
+}
+
+fn position_reflected_beams(
+    reflected_beams: Query<(Entity, &ReflectedBeam)>,
+    mut beams: Query<(&mut Transform, &BeamState)>,
+) {
+    let stay_on_plane = true;
+
+    for (reflected_beam, reflection) in reflected_beams {
+        let Ok((
+            source_trans,
+            BeamState {
+                colliding: Some(collision),
+                ..
+            },
+        )) = beams.get(reflection.source_beam)
+        else {
+            continue;
+        };
+
+        let source_trans = *source_trans;
+        let /*mut*/ reflect_at = collision.point();
+        let mut reflect_dir = collision.ray.direction.reflect(collision.normal);
+
+        if stay_on_plane {
+            let plane = Vec3::Y; // TODO: Rotate by beam
+            reflect_dir = match reflect_dir.reject_from(plane).try_normalize() {
+                Some(d) => d,
+                // TODO: Delete the beam without recreating it every frame? This will leave the beam untransformed.
+                None => continue,
+            };
+            // Ensure the position is in-plane. Theoretically unnecessary, just making sure.
+            // Requires global transform or parenting.
+            //reflect_at =
+            //    reflect_at.reject_from(plane) + source_trans.translation.project_onto(plane);
+        }
+
+        let Ok((mut reflected_trans, _)) = beams.get_mut(reflected_beam) else {
+            continue;
+        };
+        reflected_trans.translation = reflect_at;
+        reflected_trans.rotation = Quat::look_to_rh(reflect_dir, Vec3::Y).inverse();
+        reflected_trans.scale.x = source_trans.scale.x;
+        reflected_trans.scale.y = source_trans.scale.y;
     }
 }
 
@@ -383,6 +546,7 @@ mod vfx {
             let pulse_phase =
                 (mesh_state.elapsed.elapsed_secs().fract() * std::f32::consts::TAU).cos();
             width *= 1. + (pulse_phase * pulse_variance);
+            // eprintln!("beam {} gets width {width} t {open_t}", parent_ref.parent());
             trans.scale.x = width;
             trans.scale.y = width;
         }
