@@ -108,6 +108,7 @@ fn start_cast(
                             caster: caster_entity,
                         },
                         spells::beam::beam_spell(caster_entity, elements),
+                        Transform::from_scale(vec3(1., 1., 0.)),
                     ))
                     .id();
 
