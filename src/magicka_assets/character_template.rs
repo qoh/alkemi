@@ -7,12 +7,15 @@ use bevy::{
 use remagic::xnb_readers::magicka_character::CharacterTemplate as MagickaCharacterTemplate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use typed_path::PlatformPathBuf;
 
 #[derive(Asset, Reflect, Debug)]
 #[reflect(from_reflect = false)]
 pub struct CharacterTemplate {
     #[reflect(ignore)]
     pub template: MagickaCharacterTemplate,
+    #[reflect(ignore)]
+    pub content_path: PlatformPathBuf,
 }
 
 #[derive(Default)]
@@ -28,13 +31,13 @@ impl AssetLoader for CharacterTemplateLoader {
     async fn load(
         &self,
         reader: &mut dyn bevy::asset::io::Reader,
-        settings: &Self::Settings,
-        load_context: &mut LoadContext<'_>,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
     ) -> std::result::Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
 
-        let template = match remagic::parse_character(&bytes).map(|x| x.into_inner()) {
+        let _template = match remagic::parse_character(&bytes).map(|x| x.into_inner()) {
             Ok(o) => o.ok_or(CharacterTemplateLoaderError::Null)?,
             Err(e) => {
                 error!("failed to parse character template .xnb: {}", e.inner());
@@ -42,9 +45,9 @@ impl AssetLoader for CharacterTemplateLoader {
             }
         };
 
-        let asset = CharacterTemplate { template };
-
-        Ok(asset)
+        //let asset = CharacterTemplate { template };
+        //Ok(asset)
+        todo!()
     }
 
     fn extensions(&self) -> &[&str] {

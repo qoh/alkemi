@@ -1,6 +1,9 @@
 use crate::{
-    character::model::attach_model, gameplay::damage::Health,
-    magicka_assets::skinned_model::AnimationLibrary,
+    character::model::attach_model,
+    gameplay::damage::Health,
+    magicka_assets::{
+        character_template::CharacterTemplate as TemplateAsset, skinned_model::AnimationLibrary,
+    },
 };
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -17,6 +20,7 @@ pub(crate) use player::spawn_player_character;
 
 pub fn plugin(app: &mut App) {
     app.add_plugins((model::plugin, agent::plugin, player::plugin));
+    app.init_resource::<TemplateAssetsTable>();
     app.add_systems(
         FixedUpdate,
         (character_walk, turn_to_direction).before(PhysicsSystems::First),
@@ -67,22 +71,23 @@ pub struct CharacterArgs {
     pub start_as_agent: bool,
 }
 
-pub(crate) fn spawn_character(
-    InRef(CharacterArgs {
-        type_name: template_name,
-        spawn_transform,
-        scene_entity: level_entity,
-        model_index,
-        start_as_agent,
-    }): InRef<CharacterArgs>,
-    mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<StandardMaterial>>,
-    nav_mesh_archipelago: Option<
-        Single<Entity, With<bevy_landmass::Archipelago<bevy_landmass::coords::ThreeD>>>,
-    >,
-    assets: Res<AssetServer>,
-) -> Result<Entity> {
+// HACK: Workaround for AssetServer not permitting insert of loaded assets with path
+#[derive(Resource, Default, Debug)]
+pub struct TemplateAssetsTable {
+    handles: std::collections::HashMap<String, Handle<TemplateAsset>>,
+}
+
+fn get_or_load_template(
+    template_name: &str,
+    mut name_table: Mut<TemplateAssetsTable>,
+    mut templates: Mut<Assets<TemplateAsset>>,
+) -> Handle<TemplateAsset> {
+    if let Some(handle) = name_table.handles.get(template_name) {
+        return handle.clone();
+    };
+
+    debug!("Loading character template {template_name:?}");
+
     fn read_template(template_name: &str) -> (CharacterTemplate, PlatformPathBuf) {
         let mut content_path: PlatformPathBuf =
             ["Data", "Characters", template_name].iter().collect();
@@ -104,9 +109,50 @@ pub(crate) fn spawn_character(
     // HACK: Character template parsing is not fully implemented, catch todo!/unimplemented!s and fall back to known supported template
     let (template, content_path) = std::panic::catch_unwind(|| read_template(template_name))
         .unwrap_or_else(|_why| {
-            eprintln!("Reading character template {template_name:?} failed (will fall back to Wizard_Detective)");
+            error!("Reading character template {template_name:?} failed (will fall back to Wizard_Detective)");
             read_template("Wizard_Detective")
         });
+
+    let handle = templates.add(TemplateAsset {
+        template,
+        content_path,
+    });
+    name_table
+        .handles
+        .insert(template_name.to_owned(), handle.clone());
+    handle
+}
+
+pub(crate) fn spawn_character(
+    InRef(CharacterArgs {
+        type_name: template_name,
+        spawn_transform,
+        scene_entity: level_entity,
+        model_index,
+        start_as_agent,
+    }): InRef<CharacterArgs>,
+    mut template_name_table: ResMut<TemplateAssetsTable>,
+    mut templates: ResMut<Assets<TemplateAsset>>,
+    mut commands: Commands,
+    mut model_cache: ResMut<model::ModelCache>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    nav_mesh_archipelago: Option<
+        Single<Entity, With<bevy_landmass::Archipelago<bevy_landmass::coords::ThreeD>>>,
+    >,
+    assets: Res<AssetServer>,
+) -> Result<Entity> {
+    let template_asset = get_or_load_template(
+        template_name,
+        template_name_table.reborrow(),
+        templates.reborrow(),
+    );
+    let TemplateAsset {
+        template,
+        content_path,
+    } = templates
+        .get(&template_asset)
+        .expect("character template handle returned by synchronous load to be loaded");
 
     let CharacterTemplate {
         id: _, // This is the type="" for triggers, unless this is for a player, where it's overridden to "wizard"
@@ -119,7 +165,7 @@ pub(crate) fn spawn_character(
         turn_speed,
         skinned_models: _,
         ref animation_sets,
-    } = template;
+    } = *template;
 
     let model_index = model_index.unwrap_or(0); // TODO: random
 
@@ -177,10 +223,11 @@ pub(crate) fn spawn_character(
 
     let attached_model = attach_model(
         content_path.as_path(),
-        &template,
+        template,
         model_index,
         player.reborrow(),
         Transform::default(),
+        model_cache.into(),
         meshes.into(),
         materials.into(),
         &assets,

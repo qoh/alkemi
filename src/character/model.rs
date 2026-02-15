@@ -1,10 +1,17 @@
 use bevy::prelude::*;
 use remagic::xnb_readers::magicka_character::CharacterTemplate;
 use std::ffi::OsStr;
-use typed_path::PlatformPath;
+use typed_path::{PlatformPath, PlatformPathBuf};
 
 pub(super) fn plugin(app: &mut App) {
+    app.init_resource::<ModelCache>();
     app.add_systems(PostUpdate, copy_skinnedmesh_from_source);
+}
+
+// HACK: Workaround for AssetServer not permitting insert of loaded assets with path
+#[derive(Resource, Default, Debug)]
+pub struct ModelCache {
+    by_path_in_content: std::collections::HashMap<PlatformPathBuf, Handle<Scene>>,
 }
 
 #[derive(Debug)]
@@ -18,6 +25,7 @@ pub(super) fn attach_model(
     model_index: usize,
     mut player: EntityCommands,
     relative_transform: Transform,
+    mut cache: Mut<ModelCache>,
     mut meshes: Mut<Assets<Mesh>>,
     mut materials: Mut<Assets<StandardMaterial>>,
     assets: &AssetServer,
@@ -34,12 +42,13 @@ pub(super) fn attach_model(
     let full_height = length + radius * 2.;
 
     // Attach invisible shared "skeleton" model that actually plays all the animations
-    let skeleton_scene = load_model(
-        &mut meshes,
-        &mut materials,
-        assets,
+    let skeleton_scene = get_or_load_model(
         content_path,
         skinned_models.1.path.as_str(),
+        cache.reborrow(),
+        meshes.reborrow(),
+        materials.reborrow(),
+        assets,
     );
     let skeleton_ent = player
         .commands_mut()
@@ -52,12 +61,13 @@ pub(super) fn attach_model(
         .id();
 
     // Attach visible model that reflects the animation of the invisible one
-    let visual_scene = load_model(
-        &mut meshes,
-        &mut materials,
-        assets,
+    let visual_scene = get_or_load_model(
         content_path,
         skinned_models.0[model_index].0.path.as_str(),
+        cache.reborrow(),
+        meshes.reborrow(),
+        materials.reborrow(),
+        assets,
     );
     player.with_child((SceneRoot(visual_scene), CopiesSkinnedMeshFrom(skeleton_ent)));
 
@@ -66,12 +76,13 @@ pub(super) fn attach_model(
     }
 }
 
-fn load_model(
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    assets: &AssetServer,
+fn get_or_load_model(
     content_path: &PlatformPath,
     relative_path: &str,
+    mut cache: Mut<ModelCache>,
+    mut meshes: Mut<Assets<Mesh>>,
+    mut materials: Mut<Assets<StandardMaterial>>,
+    assets: &AssetServer,
 ) -> Handle<Scene> {
     let relative_path = typed_path::WindowsPathBuf::from(relative_path);
     let model_content_path = content_path.parent().unwrap().join(
@@ -80,8 +91,35 @@ fn load_model(
             .unwrap()
             .as_bytes(),
     );
+    if let Some(handle) = cache.by_path_in_content.get(model_content_path.as_path()) {
+        return (handle as &Handle<Scene>).clone();
+    }
+
+    let handle = load_model(
+        &mut meshes,
+        &mut materials,
+        assets,
+        model_content_path.as_path(),
+    );
+    cache
+        .by_path_in_content
+        .insert(model_content_path, handle.clone());
+    handle
+}
+
+fn load_model(
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    assets: &AssetServer,
+    model_content_path: &PlatformPath,
+) -> Handle<Scene> {
+    debug!(
+        "Loading character model {:?}",
+        model_content_path.to_string_lossy()
+    );
+
     let mut model_path = crate::magicka_assets::content_root()
-        .join_checked(&model_content_path)
+        .join_checked(model_content_path)
         .unwrap();
     model_path.set_extension("xnb");
 
@@ -95,7 +133,7 @@ fn load_model(
     assets.add(crate::magicka_assets::skinned_model::load_skinned_model(
         skinned_mesh,
         &xnb_asset,
-        model_content_path.as_ref(),
+        model_content_path,
         meshes,
         materials,
         assets,
