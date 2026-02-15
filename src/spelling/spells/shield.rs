@@ -96,11 +96,6 @@ pub fn shield_area() -> impl Bundle {
         Shield {
             shape: Shape::Sphere,
         },
-        RigidBody::Kinematic,
-        CollisionLayers::new(
-            Layers::Shield,
-            LayerMask::ALL & !(Layers::Trigger.to_bits()),
-        ),
         Collider::sphere(DIAMETER / 2.),
         health_and_decay(HEALTH_MAGICKA1_AREA),
     )
@@ -109,11 +104,6 @@ pub fn shield_area() -> impl Bundle {
 pub fn shield_wall() -> impl Bundle {
     (
         Shield { shape: Shape::Wall },
-        RigidBody::Kinematic,
-        CollisionLayers::new(
-            Layers::Shield,
-            LayerMask::ALL & !(Layers::Trigger.to_bits()),
-        ),
         Collider::cuboid(0.05, WALL_HEIGHT, WALL_LENGTH),
         health_and_decay(
             HEALTH_MAGICKA2_LINE_PER_ELEMENT
@@ -141,6 +131,13 @@ fn health_and_decay(health: f32) -> impl Bundle {
 }
 
 #[derive(Component)]
+#[require(
+    RigidBody::Kinematic,
+    CollisionLayers::new(
+        Layers::Shield,
+        LayerMask::ALL & !(Layers::Level.to_bits() | Layers::Trigger.to_bits()),
+    ),
+)]
 #[component(on_add = Self::on_add)]
 pub struct Shield {
     shape: Shape,
