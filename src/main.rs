@@ -1,5 +1,6 @@
 mod camera;
 mod character;
+mod components_basic;
 mod dev;
 mod gameplay;
 mod magicka_assets;
@@ -36,6 +37,7 @@ fn main() -> AppExit {
     );
     app.add_plugins((
         magicka_assets::plugin,
+        components_basic::plugin,
         magicka_level_model::plugin,
         camera::plugin,
         character::plugin,

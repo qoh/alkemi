@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 pub mod beam;
+pub mod lightning;
 pub mod shield;
 pub mod spray;
 

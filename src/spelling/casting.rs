@@ -127,6 +127,19 @@ fn start_cast(
 
                 caster.state = CasterState::Holding { cast_type, spell };
             }
+            spell_resolve::Spell::Lightning(spell_resolve::RegionWithoutWeapon::Arc) => {
+                let spell = commands
+                    .spawn((
+                        ChildOf(caster_entity),
+                        Spell {
+                            caster: caster_entity,
+                        },
+                        spells::lightning::cast_forward(elements),
+                    ))
+                    .id();
+
+                caster.state = CasterState::Holding { cast_type, spell };
+            }
             spell_resolve::Spell::Shield(spell_resolve::RegionWithWeapon::Circle) => {
                 // TODO: Cooldown etc
                 commands

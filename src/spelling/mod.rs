@@ -20,9 +20,12 @@ pub fn plugin(app: &mut App) {
 
     app.add_plugins((chanting::plugin, chanting_ui::plugin, chanting_vfx::plugin));
     app.add_plugins(casting::plugin);
-    app.add_plugins(spells::beam::plugin);
-    app.add_plugins(spells::spray::plugin);
-    app.add_plugins(spells::shield::plugin);
+    app.add_plugins((
+        spells::beam::plugin,
+        spells::spray::plugin,
+        spells::lightning::plugin,
+        spells::shield::plugin,
+    ));
 }
 
 pub fn bundle_m1() -> impl Bundle {
