@@ -8,16 +8,16 @@ name = "remagic_game"
 edition = "2024"
 
 [dependencies]
-avian3d = { version = "0.4.1", features = ["serialize"] }
-bevy = { version = "0.17.3", features = ["experimental_bevy_ui_widgets"] }
-bevy-inspector-egui = { version = "0.35.0", optional = true, features = ["highlight_changes", "bevy_gizmos", "egui_open_url"] }
-bevy_asset_loader = "0.24.0"
-bevy_enhanced_input = "0.20.0"
-bevy_hanabi = { version = "0.17.0", default-features = false, features = ["3d"] }
-bevy_landmass = "0.10.0"
+avian3d = { version = "0.5.0", features = ["serialize"] }
+bevy = { version = "0.18.0", features = ["experimental_bevy_ui_widgets"] }
+bevy-inspector-egui = { version = "0.36.0", optional = true, features = ["highlight_changes", "bevy_gizmos", "egui_open_url"] }
+bevy_asset_loader = "0.25.0"
+bevy_enhanced_input = "0.21.0"
+bevy_hanabi = { version = "0.18.0", default-features = false, features = ["3d"] }
+bevy_landmass = "0.11.0"
 bevy_minibuffer = { version = "0.5.0", optional = true }
 bevy_minibuffer_inspector = { version = "0.3.0", optional = true }
-bevy_seedling = "0.6.1"
+bevy_seedling = "0.7.0"
 bytemuck = { version = "1.24.0", features = ["min_const_generics"] }
 keyseq = { version = "0.7.0", optional = true }
 # TODO: Evaluate bevy_rand instead
@@ -49,6 +49,7 @@ opt-level = 3
 # Additional features and dependencies to enable in development,
 # most notably dynamic linking for improved compile times.
 [features]
-dev = ["bevy/debug", "bevy/bevy_dev_tools", "bevy/dynamic_linking", "bevy/bevy_remote", "bevy/file_watcher", "avian3d/bevy_diagnostic", "avian3d/diagnostic_ui", "dep:bevy-inspector-egui", "dep:bevy_minibuffer", "dep:bevy_minibuffer_inspector", "dep:keyseq"]
+dev = ["bevy/debug", "bevy/bevy_dev_tools", "bevy/dynamic_linking", "bevy/bevy_remote", "bevy/file_watcher", "avian3d/bevy_diagnostic", "avian3d/diagnostic_ui", "dep:bevy-inspector-egui"]
+dev_minibuffer = ["dep:bevy_minibuffer", "dep:bevy_minibuffer_inspector", "dep:keyseq"]
 # TODO: Don't enable dev by default
 default = ["dev"]

@@ -15,7 +15,7 @@ pub struct VisualEffect {
     pub scene: Handle<Scene>,
 }
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub(crate) struct VisualEffectLoader;
 
 impl AssetLoader for VisualEffectLoader {

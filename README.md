@@ -7,8 +7,6 @@ A project to give Magicka players an easier way to experiment with gameplay and 
 ## Notes
 You need to set the `MAGICKA_CONTENT_DIR` environment variable to the path of the *Content* directory in your Magicka install.
 
-With the `dev` feature, you can press <key>\`</key> (backtick) to toggle a command line. Type `scene` to switch level, `inspect_world` to inspect entities/components/assets/resources, and `list_acts` to all list commands.
-
 ## Interests/goals
 - Sandbox mode
 - Online servers with more than 4 players, including campaign and arena

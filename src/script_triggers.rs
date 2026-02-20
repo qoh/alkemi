@@ -49,9 +49,7 @@ fn evaluate_auto_triggers(
     let delta = world.resource::<Time>().delta();
     for trigger in &buf_triggers {
         let (_, _, mut auto_evaluate) = match q_triggers.get_mut(world, *trigger) {
-            Err(
-                QueryEntityError::EntityDoesNotExist(..) | QueryEntityError::QueryDoesNotMatch(..),
-            ) => {
+            Err(QueryEntityError::NotSpawned(..) | QueryEntityError::QueryDoesNotMatch(..)) => {
                 // It just went away
                 continue;
             }

@@ -7,7 +7,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub(crate) struct MagickaTexture2dLoader;
 
 impl AssetLoader for MagickaTexture2dLoader {

@@ -18,7 +18,7 @@ pub struct CharacterTemplate {
     pub content_path: PlatformPathBuf,
 }
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub(crate) struct CharacterTemplateLoader;
 
 impl AssetLoader for CharacterTemplateLoader {

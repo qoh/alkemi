@@ -117,7 +117,7 @@ fn set_pointer_ray(
     players: Query<&mut FacePointerRay, With<FacePointer>>,
     primary_windows: Query<&Window, With<PrimaryWindow>>,
     windows: Query<&Window>,
-    cameras: Query<(&Camera, &GlobalTransform), With<PlayerPointerCamera>>,
+    cameras: Query<(&Camera, &RenderTarget, &GlobalTransform), With<PlayerPointerCamera>>,
 ) {
     let pointer_ray = get_pointer_ray(primary_windows, windows, cameras);
     for mut look_at in players {
@@ -148,14 +148,14 @@ fn face_pointer_ray(
 fn get_pointer_ray(
     primary_windows: Query<&Window, With<PrimaryWindow>>,
     windows: Query<&Window>,
-    cameras: Query<(&Camera, &GlobalTransform), With<PlayerPointerCamera>>,
+    cameras: Query<(&Camera, &RenderTarget, &GlobalTransform), With<PlayerPointerCamera>>,
 ) -> Option<Ray3d> {
-    let (camera, camera_trans) = cameras
+    let (camera, render_target, camera_trans) = cameras
         .iter()
-        .filter(|(c, _)| c.is_active)
-        .max_by_key(|(c, _)| c.order)?;
+        .filter(|(c, _, _)| c.is_active)
+        .max_by_key(|(c, _, _)| c.order)?;
 
-    let window = match camera.target {
+    let window = match *render_target {
         RenderTarget::Window(WindowRef::Primary) => primary_windows.single().ok(),
         RenderTarget::Window(WindowRef::Entity(window)) => windows.get(window).ok(),
         _ => None,

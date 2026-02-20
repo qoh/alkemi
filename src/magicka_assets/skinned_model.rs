@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{
-    animation::{AnimationTarget, AnimationTargetId},
+    animation::{AnimatedBy, AnimationTargetId},
     mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes},
     prelude::*,
 };
@@ -79,10 +79,8 @@ pub fn load_skinned_model(
                     name,
                     Transform::default(),
                     Visibility::default(),
-                    AnimationTarget {
-                        id: anim_target_id,
-                        player: root,
-                    },
+                    anim_target_id,
+                    AnimatedBy(root),
                 ))
                 .id();
             bone_inverse_bind_poses.push(map_mat4(bone.inverse_bind_pose_transform));

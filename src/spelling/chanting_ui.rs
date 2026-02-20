@@ -211,21 +211,24 @@ fn display_queued_elements_text(
     for (element_queue, bar_target) in chanters {
         let bar = bar_target.0;
         let mut index = 0;
-        text_writer.for_each(bar, |_span, depth, mut text, _font, mut color| {
-            if depth != 1 {
-                return;
-            }
-            text.clear();
-            if let Some(element) = element_queue.queued_elements.get(index).copied() {
-                text.push(element_abbr(element));
-                **color = normalize_color(element_color(element)).0.into();
-            } else {
-                text.push(' ');
-                **color = Color::WHITE;
-            }
-            assert!(text.is_changed());
-            index += 1;
-        });
+        text_writer.for_each(
+            bar,
+            |_span, depth, mut text, _font, mut color, _line_height| {
+                if depth != 1 {
+                    return;
+                }
+                text.clear();
+                if let Some(element) = element_queue.queued_elements.get(index).copied() {
+                    text.push(element_abbr(element));
+                    **color = normalize_color(element_color(element)).0.into();
+                } else {
+                    text.push(' ');
+                    **color = Color::WHITE;
+                }
+                assert!(text.is_changed());
+                index += 1;
+            },
+        );
     }
     use super::element::Element;
     fn element_abbr(element: Element) -> char {

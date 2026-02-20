@@ -2,7 +2,7 @@ use crate::magicka_level_model::{Spawner, spawn_locator, visual_effects::spawn_v
 
 use super::{d3dx, map_mat4, map_quat, map_vec3, xna_geom};
 use bevy::{
-    animation::{AnimationTarget, AnimationTargetId, animated_field},
+    animation::{AnimatedBy, AnimationTargetId, animated_field},
     ecs::relationship::RelatedSpawnerCommands,
     prelude::*,
     render::render_resource::Face,
@@ -200,10 +200,8 @@ fn setup_animation(
     player.play(node_index).repeat();
     part_commands.insert((
         player,
-        AnimationTarget {
-            id: target_id,
-            player: part_commands.id(),
-        },
+        target_id,
+        AnimatedBy(part_commands.id()),
         AnimationGraphHandle(graph),
     ));
 }

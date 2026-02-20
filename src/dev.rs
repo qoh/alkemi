@@ -7,20 +7,20 @@ use bevy::{
     prelude::*,
 };
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-use bevy_minibuffer::prelude::*;
 
 // Use MangoHUD for frametime diagnostics.
 
 pub fn plugin(app: &mut App) {
-    app.insert_resource(InspectorVisible(false))
-        .add_plugins((
-            EguiPlugin::default(),
-            // WorldInspectorPlugin::default().run_if(inspector_visible),
-        ))
-        .add_systems(
+    app.add_plugins(EguiPlugin::default());
+
+    if !cfg!(feature = "dev_minibuffer") {
+        app.init_resource::<InspectorVisible>();
+        app.add_plugins(WorldInspectorPlugin::default().run_if(inspector_visible));
+        app.add_systems(
             PreUpdate,
             toggle_inspector_visible.run_if(input_just_pressed(KeyCode::F3)),
         );
+    }
 
     app.add_plugins(PhysicsDebugPlugin)
         .add_plugins(PhysicsDiagnosticsPlugin)
@@ -100,15 +100,8 @@ pub fn plugin(app: &mut App) {
         ));
     }
 
-    app.add_plugins(MinibufferPlugins).add_acts((
-        BasicActs::default(),
-        bevy_minibuffer_inspector::WorldActs::default().configure("inspect_world", |mut act| {
-            act.bind(keyseq! { I W })
-                .add_flags(ActFlags::ShowMinibuffer);
-        }),
-        Act::new(switch_scene).named("scene"), /*.bind(keyseq! { S S })*/
-        Act::new(execute_trigger),
-    ));
+    #[cfg(feature = "dev_minibuffer")]
+    app.add_plugins(minibuffer::plugins);
 }
 
 fn inspector_visible(vis: Res<InspectorVisible>) -> bool {
@@ -121,88 +114,121 @@ fn toggle_inspector_visible(mut vis: ResMut<InspectorVisible>) {
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct DevToolsInfo<'w> {
-    inspector_visible: Res<'w, InspectorVisible>,
+    inspector_visible: Option<Res<'w, InspectorVisible>>,
+    #[cfg(feature = "dev_minibuffer")]
     minibuffer_prompt: Res<'w, State<bevy_minibuffer::prompt::PromptState>>,
 }
 
 impl<'w> DevToolsInfo<'w> {
     pub fn needs_cursor(&self) -> bool {
-        self.inspector_visible.0 || *self.minibuffer_prompt.get() == PromptState::Visible
+        let inspector_visible = self
+            .inspector_visible
+            .as_deref()
+            .copied()
+            .unwrap_or_default()
+            .0;
+
+        #[cfg(feature = "dev_minibuffer")]
+        let minibuffer_visible = *self.minibuffer_prompt.get() == PromptState::Visible;
+        #[cfg(not(feature = "dev_minibuffer"))]
+        let minibuffer_visible = false;
+
+        inspector_visible || minibuffer_visible
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Clone, Copy, Default)]
 struct InspectorVisible(bool);
 
-fn switch_scene(mut minibuffer: Minibuffer) {
-    minibuffer
-        .prompt::<TextField>("level containing scene: ")
-        .observe(
-            |mut trigger: On<Submit<String>>, mut minibuffer: Minibuffer| -> Result {
-                let level = match trigger.event_mut().take_result() {
+#[cfg(feature = "dev_minibuffer")]
+mod minibuffer {
+    use bevy_minibuffer::prelude::*;
+
+    pub(super) fn plugin(app: &mut App) {
+        app.add_plugins(MinibufferPlugins).add_acts((
+            BasicActs::default(),
+            bevy_minibuffer_inspector::WorldActs::default().configure(
+                "inspect_world",
+                |mut act| {
+                    act.bind(keyseq! { I W })
+                        .add_flags(ActFlags::ShowMinibuffer);
+                },
+            ),
+            Act::new(switch_scene).named("scene"), /*.bind(keyseq! { S S })*/
+            Act::new(execute_trigger),
+        ));
+    }
+
+    fn switch_scene(mut minibuffer: Minibuffer) {
+        minibuffer
+            .prompt::<TextField>("level containing scene: ")
+            .observe(
+                |mut trigger: On<Submit<String>>, mut minibuffer: Minibuffer| -> Result {
+                    let level = match trigger.event_mut().take_result() {
+                        Ok(x) => x,
+                        Err(e) => {
+                            minibuffer.message(format!("{e}"));
+                            return Ok(());
+                        }
+                    };
+                    minibuffer.prompt::<TextField>("scene in level: ").observe(
+                        move |mut trigger: On<Submit<String>>,
+                              mut minibuffer: Minibuffer,
+                              mut commands: Commands|
+                              -> Result {
+                            let scene = match trigger.event_mut().take_result() {
+                                Ok(x) => x,
+                                Err(e) => {
+                                    minibuffer.message(format!("{e}"));
+                                    return Ok(());
+                                }
+                            };
+                            let spawn_point = "start";
+                            commands.queue(crate::scene::ChangeScene {
+                                level: level.to_owned(),
+                                scene: scene.to_owned(),
+                                spawn_players: true,
+                                spawn_point: Some(spawn_point.to_owned()),
+                            });
+                            minibuffer.clear();
+                            Ok(())
+                        },
+                    );
+                    Ok(())
+                },
+            );
+    }
+
+    fn execute_trigger(
+        mut minibuffer: Minibuffer,
+        triggers: Query<(Entity, &Name), With<crate::script_triggers::Trigger>>,
+    ) {
+        let map: std::collections::HashMap<_, _> = triggers
+            .iter()
+            .map(|(entity, name)| (name.as_str().to_owned(), entity))
+            .collect();
+        dbg!(&map);
+        minibuffer.prompt_map("trigger: ", map).observe(
+            |mut trigger: On<Completed<Entity>>,
+             mut minibuffer: Minibuffer,
+             mut commands: Commands|
+             -> Result {
+                let trigger = match trigger.event_mut().state.take_result().unwrap() {
                     Ok(x) => x,
                     Err(e) => {
                         minibuffer.message(format!("{e}"));
                         return Ok(());
                     }
                 };
-                minibuffer.prompt::<TextField>("scene in level: ").observe(
-                    move |mut trigger: On<Submit<String>>,
-                          mut minibuffer: Minibuffer,
-                          mut commands: Commands|
-                          -> Result {
-                        let scene = match trigger.event_mut().take_result() {
-                            Ok(x) => x,
-                            Err(e) => {
-                                minibuffer.message(format!("{e}"));
-                                return Ok(());
-                            }
-                        };
-                        let spawn_point = "start";
-                        commands.queue(crate::scene::ChangeScene {
-                            level: level.to_owned(),
-                            scene: scene.to_owned(),
-                            spawn_players: true,
-                            spawn_point: Some(spawn_point.to_owned()),
-                        });
-                        minibuffer.clear();
-                        Ok(())
-                    },
-                );
+                commands.queue(move |world: &mut World| -> Result {
+                    world.run_system_cached_with::<_, Result<_, _>, _, _>(
+                        crate::script_triggers::execute_trigger,
+                        trigger,
+                    )?
+                });
+                minibuffer.clear();
                 Ok(())
             },
         );
-}
-
-fn execute_trigger(
-    mut minibuffer: Minibuffer,
-    triggers: Query<(Entity, &Name), With<crate::script_triggers::Trigger>>,
-) {
-    let map: std::collections::HashMap<_, _> = triggers
-        .iter()
-        .map(|(entity, name)| (name.as_str().to_owned(), entity))
-        .collect();
-    dbg!(&map);
-    minibuffer.prompt_map("trigger: ", map).observe(
-        |mut trigger: On<Completed<Entity>>,
-         mut minibuffer: Minibuffer,
-         mut commands: Commands|
-         -> Result {
-            let trigger = match trigger.event_mut().state.take_result().unwrap() {
-                Ok(x) => x,
-                Err(e) => {
-                    minibuffer.message(format!("{e}"));
-                    return Ok(());
-                }
-            };
-            commands.queue(move |world: &mut World| -> Result {
-                world.run_system_cached_with::<_, Result<_, _>, _, _>(
-                    crate::script_triggers::execute_trigger,
-                    trigger,
-                )?
-            });
-            minibuffer.clear();
-            Ok(())
-        },
-    );
+    }
 }

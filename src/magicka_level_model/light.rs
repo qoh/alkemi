@@ -16,7 +16,7 @@ pub const MAGICKA_TO_LUMINANCE: f32 = 1200.; // This looks pretty good!
 
 // XXX: This should not be in the Magicka data loading module
 pub fn plugin(app: &mut App) {
-    app.insert_resource(AmbientLight {
+    app.insert_resource(GlobalAmbientLight {
         brightness: MAGICKA_TO_LUMINANCE,
         ..default()
     });
@@ -35,7 +35,7 @@ fn apply_ambient_light_source(
         (&AmbientLightSource, Option<&InheritedVisibility>),
         With<DirectionalLight>,
     >,
-    mut ambient_color: ResMut<AmbientLight>,
+    mut ambient_color: ResMut<GlobalAmbientLight>,
 ) {
     let mut ambient_lights = ambient_lights
         .iter()
