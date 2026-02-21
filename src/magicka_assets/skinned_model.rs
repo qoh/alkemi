@@ -16,6 +16,10 @@ pub struct AnimationLibrary {
     pub animations: HashMap<String, AnimationNodeIndex>,
 }
 
+#[derive(Component, Clone, Copy, Default, Debug, Reflect)]
+#[reflect(Component)]
+pub struct Bone;
+
 pub fn load_skinned_model(
     model: &remagic::xnb_readers::skinning::SkinnedModel,
     shared_resources: &impl SharedResources,
@@ -81,6 +85,7 @@ pub fn load_skinned_model(
                     Visibility::default(),
                     anim_target_id,
                     AnimatedBy(root),
+                    Bone,
                 ))
                 .id();
             bone_inverse_bind_poses.push(map_mat4(bone.inverse_bind_pose_transform));

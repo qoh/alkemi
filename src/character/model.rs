@@ -3,9 +3,12 @@ use remagic::xnb_readers::magicka_character::CharacterTemplate;
 use std::ffi::OsStr;
 use typed_path::{PlatformPath, PlatformPathBuf};
 
+use crate::magicka_assets::skinned_model::Bone;
+
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<ModelCache>();
     app.add_systems(PostUpdate, copy_skinnedmesh_from_source);
+    app.register_type::<Bone>();
 }
 
 // HACK: Workaround for AssetServer not permitting insert of loaded assets with path

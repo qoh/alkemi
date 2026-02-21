@@ -1,10 +1,14 @@
 pub mod xnb;
 
 pub mod xnb_readers {
+    mod magicka_common;
+
     pub mod magicka_character;
     pub mod magicka_content;
     pub mod magicka_effect;
+    pub mod magicka_item;
     pub mod magicka_mesh;
+
     pub mod skinning;
     pub mod xna_mesh;
     pub mod xna_tex;
@@ -52,6 +56,24 @@ pub fn parse_character<'i>(
         bytes,
         object(xnb_readers::magicka_character::character_template),
     )
+}
+
+pub fn parse_item<'i>(
+    bytes: &'i [u8],
+) -> Result<
+    XnbAsset<Option<xnb_readers::magicka_item::Item>>,
+    winnow::error::ParseError<xnb::Stream<'i>, winnow::error::ContextError>,
+> {
+    xnb::parse(bytes, object(xnb_readers::magicka_item::item))
+}
+
+pub fn parse_model<'i>(
+    bytes: &'i [u8],
+) -> Result<
+    XnbAsset<Option<xnb_readers::xna_mesh::Model>>,
+    winnow::error::ParseError<xnb::Stream<'i>, winnow::error::ContextError>,
+> {
+    xnb::parse(bytes, object(xnb_readers::xna_mesh::model))
 }
 
 pub fn parse_skinned_model<'i>(

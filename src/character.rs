@@ -1,12 +1,14 @@
 use crate::{
     character::model::attach_model,
     gameplay::damage::Health,
+    item::{DeferredAttachedItem, ItemInstance},
     magicka_assets::{
         character_template::CharacterTemplate as TemplateAsset, skinned_model::AnimationLibrary,
     },
+    magicka_level_model::map_vec3,
 };
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{asset::AsAssetId, prelude::*};
 use remagic::xnb_readers::magicka_character::CharacterTemplate;
 use std::ffi::OsStr;
 use typed_path::PlatformPathBuf;
@@ -28,7 +30,7 @@ pub fn plugin(app: &mut App) {
     app.add_systems(
         PostUpdate,
         (
-            select_animation,
+            (select_animation, select_animation_set_index),
             character_play_animation.before(bevy::app::AnimationSystems),
         )
             .chain(),
@@ -60,6 +62,11 @@ pub struct CharacterAnimationState {
     #[reflect(ignore)]
     animation_sets: Vec<remagic::xnb_readers::magicka_character::AnimationSet>,
     animation_set_index: usize,
+}
+
+#[derive(Component, Debug, Reflect)]
+pub struct CharacterEquipment {
+    pub slots: Vec<Option<Entity>>,
 }
 
 #[derive(Debug)]
@@ -175,6 +182,7 @@ pub(crate) fn spawn_character(
         turn_speed,
         skinned_models: _,
         ref animation_sets,
+        ref equipment,
     } = *template;
 
     let model_index = model_index.unwrap_or(0); // TODO: random
@@ -250,6 +258,44 @@ pub(crate) fn spawn_character(
         &assets,
     );
 
+    let mut equipped_slots = vec![None; 8];
+
+    for equip in equipment {
+        let rot = map_vec3(equip.bind_pose_rotation_euler) + vec3(0., std::f32::consts::PI, 0.);
+        let rot = Quat::from_rotation_x(rot.x)
+            * Quat::from_rotation_y(rot.y)
+            * Quat::from_rotation_z(rot.z);
+        let resolved_path =
+            crate::magicka_assets::resolve_relative_path(content_path, &equip.item.path);
+        let asset_path =
+            std::path::Path::new(resolved_path.resolved_path.as_ref() as &OsStr).to_owned();
+        let item_entity = player
+            .commands_mut()
+            .spawn((
+                ChildOf(player_entity),
+                Name::new(format!("Item Slot {}", equip.character_slot)),
+                ItemInstance(assets.load_override(asset_path)),
+                DeferredAttachedItem {
+                    bone_name: equip.bone_name.clone(),
+                    skeleton: attached_model.skeleton,
+                },
+                Transform::from_rotation(rot),
+            ))
+            .id();
+
+        if let Ok(slot_index) = usize::try_from(equip.character_slot)
+            && let Some(slot) = equipped_slots.get_mut(slot_index)
+        {
+            *slot = Some(item_entity);
+        } else {
+            warn!("Invalid character item slot index {}", equip.character_slot);
+        }
+    }
+
+    player.insert(CharacterEquipment {
+        slots: equipped_slots,
+    });
+
     player.insert(CharacterAnimationState {
         base_animation: "idle",
         force_animation: None,
@@ -291,6 +337,32 @@ fn select_animation(
         if anim != current_anim {
             char_anim.base_animation = anim;
         }
+    }
+}
+
+fn select_animation_set_index(
+    characters: Query<(&mut CharacterAnimationState, &CharacterEquipment)>,
+    items: Query<&crate::item::ItemInstance>,
+    item_assets: Res<Assets<crate::magicka_assets::item::Item>>,
+) {
+    const WEAPON_CLASS_STAFF: u8 = 18;
+
+    for (animation_state, equipment) in characters {
+        let set_index = equipment
+            .slots
+            .iter()
+            .copied()
+            .filter_map(|slot| {
+                slot.and_then(|e| items.get(e).ok())
+                    .and_then(|h| item_assets.get(h.as_asset_id()))
+                    .map(|asset| asset.item.weapon_class)
+            })
+            .filter(|weapon_class| *weapon_class != WEAPON_CLASS_STAFF)
+            .map(usize::from) // To animation set index
+            // TODO: .filter by it having the desired animation
+            .next()
+            .unwrap_or(0);
+        // TODO: Set the animation_state.animation_set_index once above TODO is done
     }
 }
 

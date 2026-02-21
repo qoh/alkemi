@@ -11,7 +11,11 @@ use winnow::{
 
 use crate::{
     xnb::{Stream, TypeReaderMeta, quicklist, types::*},
-    xnb_readers::{skinning::SkinnedModel, xna_mesh::Model},
+    xnb_readers::{
+        magicka_common::{aura, special_ability},
+        skinning::SkinnedModel,
+        xna_mesh::Model,
+    },
 };
 
 // External reference types
@@ -70,8 +74,8 @@ pub struct CharacterTemplate {
     ),
     // attached_effects: Vec<(String, String)>,
     pub animation_sets: Vec<AnimationSet>,
+    pub equipment: Vec<CharacterEquip>,
     /*
-    pub equipment: Vec<(i32, (String, Vector3, ExternalReference<Item>))>,
     pub event_conditions: Vec<(
         (u8, i32, i32, f32, f32), // event_condition
         bool,
@@ -211,18 +215,17 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
     )
     .parse_next(input)?;
 
-    let equipment = quicklist((
+    /*let equipment = quicklist((
         i32,
         (string.map(ToOwned::to_owned), vec3, external_ref::<Item>),
     ))
-    .parse_next(input)?;
+    .parse_next(input)?;*/
+    let equipment = quicklist(equip).parse_next(input)?;
 
     // TODO: Parse rest
 
     /*
-    let event_condition = (u8, i32, i32, f32, f32);
-    let event_collection = (event_condition, bool, quicklist(event_storage));
-    let event_conditions = quicklist(event_collection).parse_next(input);
+    let event_conditions = quicklist(condition_collection).parse_next(input)?;
 
     let d = (
         f32, // alert_radius
@@ -265,6 +268,7 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
         turn_speed,
         skinned_models,
         animation_sets,
+        equipment,
     })
 }
 
@@ -490,10 +494,7 @@ fn animation_action(input: &mut Stream) -> Result<AnimationAction> {
         "SpecialAbility" => {
             let weapon = i32.parse_next(input)?;
             if weapon < 0 {
-                let _type_name = string.parse_next(input)?;
-                let _s1 = string.parse_next(input)?;
-                let _s2 = string.parse_next(input)?;
-                let _element_sets = quicklist(i32).parse_next(input)?;
+                special_ability.parse_next(input)?;
             }
             AnimationActionData::SpecialAbility {}
         },
@@ -512,61 +513,6 @@ fn animation_action(input: &mut Stream) -> Result<AnimationAction> {
         end_time,
         data,
     })
-}
-
-fn event_storage(input: &mut Stream) -> Result<()> {
-    let event_type = u8
-        .try_map(EventType::try_from)
-        .context(StrContext::Expected(StrContextValue::Description(
-            "a valid character event type",
-        )))
-        .parse_next(input)?;
-    match event_type {
-        /*
-        EventType::Damage => todo!(),
-        EventType::Splash => todo!(),
-        EventType::Sound => todo!(),
-        EventType::Effect => todo!(),
-        EventType::Remove => todo!(),
-        EventType::CameraShake => todo!(),
-        EventType::Decal => todo!(),
-        EventType::Blast => todo!(),
-        EventType::Spawn => todo!(),
-        EventType::Overkill => todo!(),
-        EventType::SpawnGibs => todo!(),
-        EventType::SpawnItem => todo!(),
-        EventType::SpawnMagick => todo!(),
-        EventType::SpawnMissile => todo!(),
-        EventType::Light => todo!(),
-        EventType::CastMagick => todo!(),
-        EventType::DamageOwner => todo!(),
-        EventType::Callback => todo!(),
-        */
-        _ => todo!("read character event of type {event_type:?}"),
-    }
-}
-
-#[derive(Debug, Clone, Copy, TryFromPrimitive)]
-#[repr(u8)]
-pub enum EventType {
-    Damage,
-    Splash,
-    Sound,
-    Effect,
-    Remove,
-    CameraShake,
-    Decal,
-    Blast,
-    Spawn,
-    Overkill,
-    SpawnGibs,
-    SpawnItem,
-    SpawnMagick,
-    SpawnMissile,
-    Light,
-    CastMagick,
-    DamageOwner,
-    Callback,
 }
 
 #[derive(Debug, Clone)]
@@ -657,6 +603,24 @@ pub enum AbilityData {
         drop_animation: String,
     },
 }
+
+#[derive(Debug)]
+pub struct CharacterEquip {
+    pub character_slot: i32,
+    pub bone_name: String,
+    pub bind_pose_rotation_euler: Vector3,
+    pub item: ExternalReference<Item>,
+}
+fn equip(input: &mut Stream) -> Result<CharacterEquip> {
+    seq!(CharacterEquip {
+        character_slot: i32,
+        bone_name: string.map(ToOwned::to_owned),
+        bind_pose_rotation_euler: vec3,
+        item: external_ref,
+    })
+    .parse_next(input)
+}
+
 fn ability(input: &mut Stream) -> Result<Ability> {
     let (type_name, cooldown, target, fuzzy_expression, animation_keys) = (
         string,
@@ -777,10 +741,6 @@ fn ability(input: &mut Stream) -> Result<Ability> {
 }
 
 pub fn buff(input: &mut Stream) -> Result<()> {
-    todo!()
-}
-
-pub fn aura(input: &mut Stream) -> Result<()> {
     todo!()
 }
 

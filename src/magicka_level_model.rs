@@ -332,7 +332,7 @@ fn spawn_locator(
         .id()
 }
 
-fn map_vec3(magicka: remagic::xnb::types::Vector3) -> Vec3 {
+pub fn map_vec3(magicka: remagic::xnb::types::Vector3) -> Vec3 {
     vec3(magicka.0, magicka.1, magicka.2)
 }
 

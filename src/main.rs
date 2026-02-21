@@ -3,6 +3,7 @@ mod character;
 mod components_basic;
 mod dev;
 mod gameplay;
+mod item;
 mod magicka_assets;
 mod magicka_level_model;
 mod magicka_scene;
@@ -42,6 +43,7 @@ fn main() -> AppExit {
         magicka_level_model::plugin,
         camera::plugin,
         character::plugin,
+        item::plugin,
         script_triggers::plugin,
         gameplay::plugin,
         spelling::plugin,
