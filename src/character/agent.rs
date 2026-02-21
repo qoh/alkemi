@@ -71,8 +71,13 @@ fn agent_walk(
     )>,
 ) {
     for (target_velocity, char, mut movement) in agents {
+        let speed_recip = if char.speed != 0. && char.speed.is_finite() {
+            1. / char.speed
+        } else {
+            0.
+        };
         movement.movement =
-            (target_velocity.velocity().with_y(0.) / char.speed).clamp_length_max(1.);
+            (target_velocity.velocity().with_y(0.) * speed_recip).clamp_length_max(1.);
     }
 }
 
