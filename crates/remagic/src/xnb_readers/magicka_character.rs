@@ -409,6 +409,7 @@ fn animation_action(input: &mut Stream) -> Result<AnimationAction> {
         })
         .parse_next(input)?,
         "CameraShake" => seq!(AnimationActionData::CameraShake {
+            _: string,
             duration: f32,
             magnitude: f32
         })
