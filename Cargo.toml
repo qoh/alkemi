@@ -12,6 +12,7 @@ avian3d = { version = "0.5.0", features = ["serialize"] }
 bevy = { version = "0.18.0", features = ["experimental_bevy_ui_widgets", "free_camera"] }
 bevy-inspector-egui = { version = "0.36.0", optional = true, features = ["highlight_changes", "bevy_gizmos", "egui_open_url"] }
 bevy_asset_loader = "0.25.0"
+bevy_console = { version = "0.17.1", optional = true }
 bevy_enhanced_input = "0.21.0"
 bevy_hanabi = { version = "0.18.0", default-features = false, features = ["3d"] }
 bevy_landmass = "0.11.0"
@@ -19,6 +20,7 @@ bevy_minibuffer = { version = "0.5.0", optional = true }
 bevy_minibuffer_inspector = { version = "0.3.0", optional = true }
 bevy_seedling = "0.7.0"
 bytemuck = { version = "1.24.0", features = ["min_const_generics"] }
+clap = { version = "4.5.60", optional = true }
 keyseq = { version = "0.7.0", optional = true }
 # TODO: Evaluate bevy_rand instead
 rand = { version = "0.9.2", default-features = false, features = ["std", "os_rng", "small_rng"] }
@@ -51,5 +53,6 @@ opt-level = 3
 [features]
 dev = ["bevy/debug", "bevy/bevy_dev_tools", "bevy/dynamic_linking", "bevy/bevy_remote", "bevy/file_watcher", "avian3d/bevy_diagnostic", "avian3d/diagnostic_ui", "dep:bevy-inspector-egui"]
 dev_minibuffer = ["dep:bevy_minibuffer", "dep:bevy_minibuffer_inspector", "dep:keyseq"]
+dev_console = ["dep:bevy_console", "dep:clap"]
 # TODO: Don't enable dev by default
-default = ["dev"]
+default = ["dev", "dev_console"]

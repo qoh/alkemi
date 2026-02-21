@@ -1,5 +1,7 @@
 #![cfg(feature = "dev")]
 
+mod console;
+
 use avian3d::prelude::*;
 use bevy::{
     color::palettes,
@@ -102,6 +104,9 @@ pub fn plugin(app: &mut App) {
 
     #[cfg(feature = "dev_minibuffer")]
     app.add_plugins(minibuffer::plugins);
+
+    #[cfg(feature = "dev_console")]
+    app.add_plugins(console::plugin);
 }
 
 fn inspector_visible(vis: Res<InspectorVisible>) -> bool {
