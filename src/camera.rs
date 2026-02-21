@@ -1,20 +1,15 @@
 use crate::PlayerControlled;
 use crate::magicka_level_model::CameraMesh;
 use bevy::{
-    core_pipeline::tonemapping::Tonemapping,
-    input::mouse::AccumulatedMouseMotion,
-    post_process::bloom::Bloom,
-    prelude::*,
+    core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom, prelude::*,
     render::view::Hdr,
-    window::{CursorGrabMode, CursorOptions},
 };
 use bevy_seedling::prelude::*;
-use std::f32::consts::FRAC_PI_2;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn_camera)
-        .add_systems(Update, (rotate_free_camera, move_free_camera).chain())
         .add_systems(PostUpdate, camera_follow_group);
+    app.add_plugins(free_camera::plugin);
 }
 
 #[derive(Component, Reflect)]
@@ -27,42 +22,39 @@ pub struct CameraGroupFollower {
 #[derive(Component, Default)]
 pub struct CameraGroupMember;
 
-#[derive(Debug, Component, Deref, DerefMut)]
-pub(crate) struct CameraSensitivity(Vec2);
-
-impl Default for CameraSensitivity {
-    fn default() -> Self {
-        Self(Vec2::new(0.003, 0.002))
-    }
-}
-
 /// The camera to use for controlling players that face the pointer.
 #[derive(Component, Default, Debug, Clone, Copy)]
 pub struct PlayerPointerCamera;
 
+/// This camera is a primary view into the world and will be swapped out for different camera modes.
+#[derive(Component, Default, Debug, Clone, Copy)]
+pub struct PrimaryView;
+
 pub(crate) fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("Camera"),
-        Camera {
-            clear_color: ClearColorConfig::Custom(Color::BLACK),
-            ..default()
-        },
-        Camera3d::default(),
+        world_view_camera(),
         SpatialListener3D,
         Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Dir3::Y),
-        Hdr,
-        Tonemapping::None, // Magicka would not
-        bevy::camera::Exposure {
-            ev100: crate::magicka_level_model::light::MAGICKA_EXPOSURE,
-        },
-        Bloom::default(),
-        CameraSensitivity::default(),
         CameraGroupFollower {
             position: default(),
             magnify: 1.,
         },
         PlayerPointerCamera,
     ));
+}
+
+fn world_view_camera() -> impl Bundle {
+    (
+        Camera3d::default(),
+        Hdr,
+        Tonemapping::None, // Magicka would not
+        bevy::camera::Exposure {
+            ev100: crate::magicka_level_model::light::MAGICKA_EXPOSURE,
+        },
+        Bloom::default(),
+        PrimaryView,
+    )
 }
 
 fn camera_follow_group(
@@ -134,60 +126,99 @@ fn camera_follow_group(
     *camera_projection = Projection::Perspective(PerspectiveProjection { fov, ..default() });
 }
 
-fn move_free_camera(
-    mut camera: Single<&mut Transform, (With<Camera3d>, With<PlayerControlled>)>,
-    time: Res<Time>,
-    kb_input: Res<ButtonInput<KeyCode>>,
-) {
-    let mut direction = Vec2::ZERO;
+mod free_camera {
+    use crate::camera::PrimaryView;
 
-    if kb_input.pressed(KeyCode::KeyW) {
-        direction.y -= 1.;
+    use super::world_view_camera;
+    use bevy::{
+        camera_controller::free_camera::{FreeCamera, FreeCameraPlugin, FreeCameraState},
+        prelude::*,
+    };
+    use bevy_enhanced_input::prelude::*;
+
+    pub fn plugin(app: &mut App) {
+        app.add_plugins(FreeCameraPlugin);
+        app.add_input_context::<FreeCameraInput>();
+        app.add_systems(Startup, spawn_free_camera);
+        app.add_observer(toggle_free_camera);
     }
 
-    if kb_input.pressed(KeyCode::KeyS) {
-        direction.y += 1.;
+    fn spawn_free_camera(mut commands: Commands) {
+        commands.spawn((
+            Name::new("Free Camera"),
+            Camera {
+                is_active: false,
+                ..default()
+            },
+            world_view_camera(),
+            FreeCamera::default(),
+            {
+                let mut state = FreeCameraState::default();
+                state.enabled = false;
+                state
+            },
+            FreeCameraInput,
+            actions!(FreeCameraInput[
+                (
+                    Action::<ToggleFreeCamera>::new(),
+                    bindings![KeyCode::KeyP],
+                ),
+            ]),
+        ));
     }
 
-    if kb_input.pressed(KeyCode::KeyA) {
-        direction.x -= 1.;
+    fn toggle_free_camera(
+        event: On<Start<ToggleFreeCamera>>,
+        mut cameras: Query<
+            (Entity, &mut Camera, &mut Transform, Option<&mut Projection>),
+            With<PrimaryView>,
+        >,
+        mut free_cameras: Query<(Entity, &mut FreeCameraState), With<PrimaryView>>,
+    ) {
+        let Ok((free_camera, mut free_camera_state)) = free_cameras.get_mut(event.context) else {
+            warn_once!("ToggleFreeCamera input action triggered on non-free camera entity");
+            return;
+        };
+
+        free_camera_state.enabled ^= true;
+
+        let mut starting_view = None;
+
+        for (camera_entity, mut camera, camera_transform, camera_projection) in &mut cameras {
+            let is_free_camera = camera_entity == free_camera;
+            camera.is_active = free_camera_state.enabled == is_free_camera;
+            if !is_free_camera {
+                starting_view.get_or_insert_with(|| {
+                    (*camera_transform, camera_projection.as_deref().cloned())
+                });
+            }
+        }
+
+        // Start free camera at first non-free camera location
+        if free_camera_state.enabled
+            && let Some((source_trans, source_proj)) = starting_view
+            && let Ok((_, _, mut target_trans, target_proj)) = cameras.get_mut(free_camera)
+        {
+            *target_trans = source_trans;
+            // Apply dolly zoom to preserve visible width
+            if let (Some(Projection::Perspective(source_persp)), Some(mut target_proj)) =
+                (source_proj, target_proj)
+                && let Projection::Perspective(target_persp) = &mut *target_proj
+            {
+                let source_distance = vec3(0., 144., 171.).length();
+                let source_size_at_distance = 2. * (source_persp.fov / 2.) * source_distance;
+                let target_distance =
+                    source_size_at_distance / (2. * ((1. / 2.) * target_persp.fov).tan());
+                let displacement = target_trans.forward() * (source_distance - target_distance);
+                target_trans.translation += displacement;
+            }
+        }
     }
 
-    if kb_input.pressed(KeyCode::KeyD) {
-        direction.x += 1.;
-    }
+    #[derive(Component, Default)]
+    struct FreeCameraInput;
 
-    let direction = camera.rotation * direction.normalize_or_zero().extend(0.).xzy();
-
-    let move_delta = direction * 30. * time.delta_secs();
-    camera.translation += move_delta;
-}
-
-fn rotate_free_camera(
-    accumulated_mouse_motion: Res<AccumulatedMouseMotion>,
-    camera: Single<(&mut Transform, &CameraSensitivity), (With<Camera3d>, With<PlayerControlled>)>,
-    cursor_grab: Option<Single<&mut CursorOptions, With<bevy::window::PrimaryWindow>>>,
-) {
-    if let Some(cursor_grab) = cursor_grab
-        && cursor_grab.grab_mode == CursorGrabMode::None
-    {
-        return;
-    }
-
-    let (mut transform, camera_sensitivity) = camera.into_inner();
-
-    let delta = accumulated_mouse_motion.delta;
-
-    if delta != Vec2::ZERO {
-        let delta_yaw = -delta.x * camera_sensitivity.x;
-        let delta_pitch = -delta.y * camera_sensitivity.y;
-
-        let (yaw, pitch, roll) = transform.rotation.to_euler(EulerRot::YXZ);
-        let yaw = yaw + delta_yaw;
-
-        const PITCH_LIMIT: f32 = FRAC_PI_2 - 0.01;
-        let pitch = (pitch + delta_pitch).clamp(-PITCH_LIMIT, PITCH_LIMIT);
-
-        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, roll);
-    }
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    struct ToggleFreeCamera;
 }

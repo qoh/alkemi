@@ -7,6 +7,15 @@ A project to give Magicka players an easier way to experiment with gameplay and 
 ## Notes
 You need to set the `MAGICKA_CONTENT_DIR` environment variable to the path of the *Content* directory in your Magicka install.
 
+Press *P* to toggle free camera mode. In free camera mode:
+- Mouse - Move camera orientation
+- Scroll - Adjust movement speed
+- Left Click - Hold to grab cursor
+- M - Toggle cursor grab
+- W, A, S, D - Fly forwards, left, backwards, & right
+- E, Q - Fly up & down
+- Shift - Fly faster while held
+
 ## Interests/goals
 - Sandbox mode
 - Online servers with more than 4 players, including campaign and arena

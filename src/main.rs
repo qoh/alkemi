@@ -21,6 +21,7 @@ use bevy_seedling::prelude::*;
 
 fn main() -> AppExit {
     let mut app = App::new();
+    app.insert_resource(ClearColor(Color::BLACK));
     app.add_plugins((
         DefaultPlugins.set(AssetPlugin {
             unapproved_path_mode: bevy::asset::UnapprovedPathMode::Deny,
