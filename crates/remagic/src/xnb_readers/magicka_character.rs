@@ -486,7 +486,16 @@ fn animation_action(input: &mut Stream) -> Result<AnimationAction> {
             item_aligned: bool
         })
         .parse_next(input)?,
-        "SpecialAbility" => todo!("parse character template special ability"),
+        "SpecialAbility" => {
+            let weapon = i32.parse_next(input)?;
+            if weapon < 0 {
+                let _type_name = string.parse_next(input)?;
+                let _s1 = string.parse_next(input)?;
+                let _s2 = string.parse_next(input)?;
+                let _element_sets = quicklist(i32).parse_next(input)?;
+            }
+            AnimationActionData::SpecialAbility {}
+        },
         "Suicide" => seq!(AnimationActionData::Suicide { overkill: bool }).parse_next(input)?,
         "ThrowGrip" => AnimationActionData::ThrowGrip,
         "Tongue" => seq!(AnimationActionData::Tongue { max_length: f32 }).parse_next(input)?,
