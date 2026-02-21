@@ -135,7 +135,7 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
             i32.try_map(usize::try_from).verify(|n| *n <= 4),
             (
                 string.map(ToOwned::to_owned),
-                string.map(ToOwned::to_owned),
+                f32,
                 vec3,
                 vec3,
                 f32,
