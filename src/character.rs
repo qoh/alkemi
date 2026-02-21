@@ -66,9 +66,18 @@ pub struct CharacterAnimationState {
 pub struct CharacterArgs {
     pub type_name: String,
     pub spawn_transform: Transform,
+    /// What position on the character does [`spawn_transform`] identify?
+    pub spawn_anchor: CharacterAnchorPoint,
     pub scene_entity: Option<Entity>,
     pub model_index: Option<usize>,
     pub start_as_agent: bool,
+}
+
+#[derive(Clone, Copy, Default, Debug)]
+pub enum CharacterAnchorPoint {
+    #[default]
+    Center,
+    Bottom,
 }
 
 // HACK: Workaround for AssetServer not permitting insert of loaded assets with path
@@ -127,6 +136,7 @@ pub(crate) fn spawn_character(
     InRef(CharacterArgs {
         type_name: template_name,
         spawn_transform,
+        spawn_anchor,
         scene_entity: level_entity,
         model_index,
         start_as_agent,
@@ -171,9 +181,16 @@ pub(crate) fn spawn_character(
 
     let full_height = length + radius * 2.;
 
+    let spawn_transform = match spawn_anchor {
+        CharacterAnchorPoint::Center => *spawn_transform,
+        CharacterAnchorPoint::Bottom => {
+            *spawn_transform * Transform::from_translation(Vec3::Y * 0.5 * full_height)
+        }
+    };
+
     let mut player = commands.spawn((
         Name::new("Character"),
-        *spawn_transform,
+        spawn_transform,
         Visibility::default(),
         RigidBody::Dynamic,
         Collider::capsule(radius, length),

@@ -10,8 +10,9 @@ use bevy::{
     prelude::*,
     render::render_resource::BlendState,
 };
+use bevy_enhanced_input::{EnhancedInputSystems, prelude::ActionSources};
 use bevy_inspector_egui::{
-    bevy_egui::{EguiGlobalSettings, EguiPlugin, PrimaryEguiContext},
+    bevy_egui::{EguiContext, EguiGlobalSettings, EguiPlugin, PrimaryEguiContext},
     quick::WorldInspectorPlugin,
 };
 
@@ -19,7 +20,11 @@ use bevy_inspector_egui::{
 
 pub fn plugin(app: &mut App) {
     app.add_plugins(EguiPlugin::default())
-        .add_systems(Startup, setup_egui);
+        .add_systems(Startup, setup_egui)
+        .add_systems(
+            PreUpdate,
+            suppress_enhanced_input.before(EnhancedInputSystems::Update),
+        );
 
     if !cfg!(feature = "dev_minibuffer") {
         app.init_resource::<InspectorVisible>();
@@ -170,6 +175,31 @@ fn setup_egui(mut commands: Commands, mut egui_global_settings: ResMut<EguiGloba
             ..default()
         },
     ));
+}
+
+fn suppress_enhanced_input(
+    mut action_sources: ResMut<ActionSources>,
+    interactions: Query<&Interaction>,
+    mut egui: Query<&mut EguiContext>,
+) {
+    let bevy_mouse_unused = interactions
+        .iter()
+        .all(|&interaction| interaction == Interaction::None);
+
+    let egui_mouse_unused = !egui
+        .iter_mut()
+        .any(|mut ctx| ctx.get_mut().wants_pointer_input());
+    let egui_keyboard_unused = !egui
+        .iter_mut()
+        .any(|mut ctx| ctx.get_mut().wants_keyboard_input());
+
+    let mouse_unused = bevy_mouse_unused && egui_mouse_unused;
+    let keyboard_unused = egui_keyboard_unused;
+
+    action_sources.mouse_buttons = mouse_unused;
+    action_sources.mouse_wheel = mouse_unused;
+
+    action_sources.keyboard = keyboard_unused;
 }
 
 #[cfg(feature = "dev_minibuffer")]

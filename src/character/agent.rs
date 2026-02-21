@@ -41,6 +41,7 @@ pub fn spawn_follower(
         &CharacterArgs {
             type_name: "Wizard_Reddit".to_owned(),
             spawn_transform,
+            spawn_anchor: default(),
             scene_entity: level_entity,
             model_index: None,
             start_as_agent: true,

@@ -1,14 +1,20 @@
 use crate::PlayerControlled;
 use crate::magicka_level_model::CameraMesh;
 use bevy::{
-    core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom, prelude::*,
+    camera::RenderTarget,
+    core_pipeline::tonemapping::Tonemapping,
+    input::InputSystems,
+    post_process::bloom::Bloom,
+    prelude::*,
     render::view::Hdr,
+    window::{PrimaryWindow, WindowRef},
 };
 use bevy_seedling::prelude::*;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn_camera)
         .add_systems(PostUpdate, camera_follow_group);
+    app.add_systems(PreUpdate, project_pointer_camera_rays.after(InputSystems));
     app.add_plugins(free_camera::plugin);
 }
 
@@ -22,9 +28,11 @@ pub struct CameraGroupFollower {
 #[derive(Component, Default)]
 pub struct CameraGroupMember;
 
-/// The camera to use for controlling players that face the pointer.
-#[derive(Component, Default, Debug, Clone, Copy)]
-pub struct PlayerPointerCamera;
+/// The window cursor projected into the world with this camera at the start of the frame.
+#[derive(Component, Default, Debug)]
+pub struct PointerRay {
+    pub current: Option<Ray3d>,
+}
 
 /// This camera is a primary view into the world and will be swapped out for different camera modes.
 #[derive(Component, Default, Debug, Clone, Copy)]
@@ -40,7 +48,7 @@ pub(crate) fn spawn_camera(mut commands: Commands) {
             position: default(),
             magnify: 1.,
         },
-        PlayerPointerCamera,
+        PointerRay::default(),
     ));
 }
 
@@ -55,6 +63,28 @@ fn world_view_camera() -> impl Bundle {
         Bloom::default(),
         PrimaryView,
     )
+}
+
+pub fn project_pointer_camera_rays(
+    cameras: Query<(&mut PointerRay, &Camera, &RenderTarget, &GlobalTransform)>,
+    windows: Query<&Window>,
+    primary_windows: Query<&Window, With<PrimaryWindow>>,
+) {
+    for (pointer_ray, camera, render_target, camera_trans) in cameras {
+        let window = match *render_target {
+            RenderTarget::Window(WindowRef::Primary) => primary_windows.single().ok(),
+            RenderTarget::Window(WindowRef::Entity(window)) => windows.get(window).ok(),
+            _ => None,
+        };
+
+        let maybe_ray = window
+            .and_then(|w| w.cursor_position())
+            .and_then(|cursor| camera.viewport_to_world(camera_trans, cursor).ok());
+
+        pointer_ray
+            .map_unchanged(|r| &mut r.current)
+            .set_if_neq(maybe_ray);
+    }
 }
 
 fn camera_follow_group(

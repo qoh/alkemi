@@ -306,6 +306,7 @@ fn execute_trigger_action(
                         &crate::character::CharacterArgs {
                             type_name: type_name.clone(),
                             spawn_transform: spawn_transform.into(),
+                            spawn_anchor: default(),
                             scene_entity: Some(current_scene_entity),
                             model_index: None,
                             start_as_agent: true,

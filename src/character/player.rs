@@ -1,22 +1,23 @@
 use crate::{
-    camera::{CameraGroupMember, PlayerPointerCamera},
+    camera::{CameraGroupMember, PointerRay, project_pointer_camera_rays},
     character::{
         Character, CharacterArgs, CharacterDesiredMovement, spawn_character, turn_to_direction,
     },
     magicka_level_model::Locator,
 };
 use bevy::{
-    camera::RenderTarget,
     ecs::system::{SystemParam, SystemState},
     input::InputSystems,
     prelude::*,
-    window::{PrimaryWindow, WindowRef},
 };
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
         PreUpdate,
-        (player_walk, set_pointer_ray).after(InputSystems),
+        (
+            player_walk.after(InputSystems),
+            set_face_pointer_rays.after(project_pointer_camera_rays),
+        ),
     );
     app.add_systems(FixedUpdate, face_pointer_ray.before(turn_to_direction));
 }
@@ -40,6 +41,7 @@ pub fn spawn_player_character(
         &CharacterArgs {
             type_name: "Wizard".to_owned(),
             spawn_transform,
+            spawn_anchor: default(),
             scene_entity: level_entity,
             model_index: None,
             start_as_agent: false,
@@ -113,15 +115,16 @@ pub struct FacePointerRay {
     pub pointer_ray: Option<Ray3d>,
 }
 
-fn set_pointer_ray(
+fn set_face_pointer_rays(
     players: Query<&mut FacePointerRay, With<FacePointer>>,
-    primary_windows: Query<&Window, With<PrimaryWindow>>,
-    windows: Query<&Window>,
-    cameras: Query<(&Camera, &RenderTarget, &GlobalTransform), With<PlayerPointerCamera>>,
+    cameras: Query<(&Camera, &PointerRay)>,
 ) {
-    let pointer_ray = get_pointer_ray(primary_windows, windows, cameras);
-    for mut look_at in players {
-        look_at.pointer_ray = pointer_ray;
+    for mut face_pointer_ray in players {
+        face_pointer_ray.pointer_ray = cameras
+            .iter()
+            .filter(|(c, _)| c.is_active)
+            .max_by_key(|(c, _)| c.order)
+            .and_then(|(_, r)| r.current);
     }
 }
 
@@ -143,25 +146,4 @@ fn face_pointer_ray(
             movement.direction = Vec3::ZERO;
         };
     }
-}
-
-fn get_pointer_ray(
-    primary_windows: Query<&Window, With<PrimaryWindow>>,
-    windows: Query<&Window>,
-    cameras: Query<(&Camera, &RenderTarget, &GlobalTransform), With<PlayerPointerCamera>>,
-) -> Option<Ray3d> {
-    let (camera, render_target, camera_trans) = cameras
-        .iter()
-        .filter(|(c, _, _)| c.is_active)
-        .max_by_key(|(c, _, _)| c.order)?;
-
-    let window = match *render_target {
-        RenderTarget::Window(WindowRef::Primary) => primary_windows.single().ok(),
-        RenderTarget::Window(WindowRef::Entity(window)) => windows.get(window).ok(),
-        _ => None,
-    }?;
-
-    window
-        .cursor_position()
-        .and_then(|cursor| camera.viewport_to_world(camera_trans, cursor).ok())
 }
