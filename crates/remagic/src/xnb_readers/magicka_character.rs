@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use num_enum::TryFromPrimitive;
 use winnow::{
     Parser, Result,
     binary::length_repeat,
     combinator::{cond, repeat, seq},
     error::{ContextError, StrContext, StrContextValue},
+    stream::Stream as _,
 };
 
 use crate::{
@@ -215,6 +217,9 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
     ))
     .parse_next(input)?;
 
+    // TODO: Parse rest
+
+    /*
     let event_condition = (u8, i32, i32, f32, f32);
     let event_collection = (event_condition, bool, quicklist(event_storage));
     let event_conditions = quicklist(event_collection).parse_next(input);
@@ -244,6 +249,10 @@ pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
     let move_animations = quicklist((u8, quicklist(string))).parse_next(input)?; // map<movement_properties, vec<animation>>
     let buffs = quicklist(buff).parse_next(input)?;
     let auras = quicklist(aura).parse_next(input)?;
+
+    */
+
+    let _uninterpreted = input.finish();
 
     Ok(CharacterTemplate {
         id,
@@ -496,8 +505,58 @@ fn animation_action(input: &mut Stream) -> Result<AnimationAction> {
 }
 
 fn event_storage(input: &mut Stream) -> Result<()> {
-    let event_type = u8.parse_next(input)?;
-    todo!("read event storage for event type {}", event_type)
+    let event_type = u8
+        .try_map(EventType::try_from)
+        .context(StrContext::Expected(StrContextValue::Description(
+            "a valid character event type",
+        )))
+        .parse_next(input)?;
+    match event_type {
+        /*
+        EventType::Damage => todo!(),
+        EventType::Splash => todo!(),
+        EventType::Sound => todo!(),
+        EventType::Effect => todo!(),
+        EventType::Remove => todo!(),
+        EventType::CameraShake => todo!(),
+        EventType::Decal => todo!(),
+        EventType::Blast => todo!(),
+        EventType::Spawn => todo!(),
+        EventType::Overkill => todo!(),
+        EventType::SpawnGibs => todo!(),
+        EventType::SpawnItem => todo!(),
+        EventType::SpawnMagick => todo!(),
+        EventType::SpawnMissile => todo!(),
+        EventType::Light => todo!(),
+        EventType::CastMagick => todo!(),
+        EventType::DamageOwner => todo!(),
+        EventType::Callback => todo!(),
+        */
+        _ => todo!("read character event of type {event_type:?}"),
+    }
+}
+
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u8)]
+pub enum EventType {
+    Damage,
+    Splash,
+    Sound,
+    Effect,
+    Remove,
+    CameraShake,
+    Decal,
+    Blast,
+    Spawn,
+    Overkill,
+    SpawnGibs,
+    SpawnItem,
+    SpawnMagick,
+    SpawnMissile,
+    Light,
+    CastMagick,
+    DamageOwner,
+    Callback,
 }
 
 #[derive(Debug, Clone)]
