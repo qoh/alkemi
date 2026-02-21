@@ -4,16 +4,22 @@ mod console;
 
 use avian3d::prelude::*;
 use bevy::{
+    camera::{CameraOutputMode, visibility::RenderLayers},
     color::palettes,
     input::{ButtonState, common_conditions::input_just_pressed, keyboard::KeyboardInput},
     prelude::*,
+    render::render_resource::BlendState,
 };
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use bevy_inspector_egui::{
+    bevy_egui::{EguiGlobalSettings, EguiPlugin, PrimaryEguiContext},
+    quick::WorldInspectorPlugin,
+};
 
 // Use MangoHUD for frametime diagnostics.
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(EguiPlugin::default());
+    app.add_plugins(EguiPlugin::default())
+        .add_systems(Startup, setup_egui);
 
     if !cfg!(feature = "dev_minibuffer") {
         app.init_resource::<InspectorVisible>();
@@ -144,6 +150,27 @@ impl<'w> DevToolsInfo<'w> {
 
 #[derive(Resource, Clone, Copy, Default)]
 struct InspectorVisible(bool);
+
+fn setup_egui(mut commands: Commands, mut egui_global_settings: ResMut<EguiGlobalSettings>) {
+    // Disable the automatic creation of a primary context to set it up manually.
+    egui_global_settings.auto_create_primary_context = false;
+    commands.spawn((
+        PrimaryEguiContext,
+        Camera2d,
+        // Setting RenderLayers to none makes sure we won't render anything apart from the UI.
+        RenderLayers::none(),
+        Camera {
+            order: 1,
+            clear_color: ClearColorConfig::None,
+            // Prevent flicker when switching main camera
+            output_mode: CameraOutputMode::Write {
+                blend_state: Some(BlendState::ALPHA_BLENDING),
+                clear_color: ClearColorConfig::None,
+            },
+            ..default()
+        },
+    ));
+}
 
 #[cfg(feature = "dev_minibuffer")]
 mod minibuffer {
