@@ -215,7 +215,8 @@ where
         } else if header.flags & HEADER_FLAG_COMPRESSED_LZ4 != 0 {
             todo!("not lzx")
         } else {
-            todo!("hmm")
+            // XXX: Is this right?
+            input.finish().to_vec().into_boxed_slice()
         };
 
         let mut input = Stream {
