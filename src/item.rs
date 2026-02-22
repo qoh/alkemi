@@ -9,6 +9,7 @@ use crate::{
 
 pub fn plugin(app: &mut App) {
     app.add_systems(Update, spawn_new_item_models);
+    app.add_systems(Update, reenable_physics_for_detached_item);
     app.add_systems(
         PostUpdate,
         attach_items_to_skeleton.before(TransformSystems::Propagate),
@@ -17,9 +18,7 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Reflect)]
 #[require(
-    RigidBodyDisabled,
-    ColliderDisabled,
-    // RigidBody::Dynamic,
+    RigidBody::Dynamic,
     Collider::cuboid(1., 1., 1.),
     Restitution::new(0.),
     Friction::new(1.),
@@ -38,6 +37,7 @@ impl AsAssetId for ItemInstance {
 }
 
 #[derive(Component, Default, Debug, Reflect)]
+#[require(RigidBodyDisabled, ColliderDisabled)]
 pub struct AttachedItem;
 
 /// Waiting for the skeleton to load
@@ -46,6 +46,20 @@ pub struct AttachedItem;
 pub struct DeferredAttachedItem {
     pub bone_name: String, // not nice that this is a (cloned) string
     pub skeleton: Entity,
+}
+
+fn reenable_physics_for_detached_item(
+    mut newly_detached_entities: RemovedComponents<AttachedItem>,
+    items: Query<(), With<ItemInstance>>,
+    mut commands: Commands,
+) {
+    for entity in newly_detached_entities.read() {
+        if items.contains(entity) {
+            commands
+                .entity(entity)
+                .try_remove::<(RigidBodyDisabled, ColliderDisabled)>();
+        }
+    }
 }
 
 type AssetHandleChanged<C> = Or<(Changed<C>, AssetChanged<C>)>;
