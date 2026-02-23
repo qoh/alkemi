@@ -18,7 +18,11 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Reflect)]
 #[require(
-    RigidBody::Dynamic,
+    // FIXME: Making these rigidbodies currently causes a panic on havindr_s1
+    // if character anims spearman_idle or common_idle are allowed to play
+    // > thread 'main' (307250) panicked at <crates>/avian3d-0.5.0/src/collision/collider/mod.rs:512:9:
+    // > assertion failed: b.min.cmple(b.max).all()
+    //RigidBody::Dynamic,
     Collider::cuboid(1., 1., 1.),
     Restitution::new(0.),
     Friction::new(1.),
