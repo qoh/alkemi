@@ -15,7 +15,7 @@ use typed_path::PlatformPathBuf;
 
 mod agent;
 mod model;
-mod player;
+pub(crate) mod player;
 
 pub(crate) use agent::spawn_follower;
 pub(crate) use player::spawn_player_character;

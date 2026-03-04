@@ -22,6 +22,11 @@ pub fn plugin(app: &mut App) {
     app.add_systems(FixedUpdate, face_pointer_ray.before(turn_to_direction));
 }
 
+#[derive(Component, Debug)]
+pub struct PlayerCharacter {
+    pub index: u8,
+}
+
 pub fn spawn_player_character(
     (In(level_entity), InRef(spawn_point_basename)): (In<Option<Entity>>, InRef<str>),
     world: &mut World,
@@ -57,6 +62,9 @@ pub fn spawn_player_character(
         crate::spelling::bundle_m1(),
         crate::spelling::bindings_m1(),
         CameraGroupMember,
+        PlayerCharacter {
+            index: player_index,
+        },
         crate::PlayerControlled,
         FacePointer,
     ));

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::character::{Character, player::PlayerCharacter};
+
 #[derive(Clone, Debug)]
 pub struct AvatarMove {
     targets: Vec<(PlayerTarget, Vec<AvatarEvent>)>,
@@ -43,13 +45,109 @@ enum MoveFacing {
     Undirected(bool),
 }
 
-pub fn execute_avatar_move(action: In<impl AsRef<AvatarMove>>) {
+pub fn execute_avatar_move(
+    action: In<impl AsRef<AvatarMove>>,
+    numbered_players: Query<(Entity, &PlayerCharacter)>,
+    mut player_transforms_and_transform_helper: ParamSet<(
+        Query<&mut Transform, With<Character>>,
+        TransformHelper,
+    )>,
+    locators: Query<(Entity, &Name), With<crate::magicka_level_model::Locator>>,
+    areas: Query<(Entity, &Name), With<crate::magicka_level_model::TriggerArea>>,
+) {
     let action = action.as_ref();
     for (target, events) in &action.targets {
+        let target_entity = match *target {
+            PlayerTarget::Index(n) => numbered_players
+                .iter()
+                .find(|(_e, ch)| ch.index == n)
+                .map(|(e, _ch)| e),
+            PlayerTarget::Name => {
+                info!("NYI: AvatarMove target player by ID");
+                None
+            }
+        };
+        let Some(target_entity) = target_entity else {
+            // There is no such player (common if playing multiplayer map in singleplayer)
+            continue;
+        };
         for event in events {
-            info!("NYI: AvatarMove of {target:?}: {event:?}");
+            // TODO: queueing?, delay, trigger
+            match event.data {
+                AvatarEventData::Move {
+                    position: ref target_position_source,
+                    facing_direction: _,
+                    speed: _,
+                } => {
+                    let target_position = match *target_position_source {
+                        MoveTarget::Position(target) => target,
+                        MoveTarget::Trigger(ref id) => {
+                            let Some(location) = named_trigger_location(
+                                id,
+                                &locators,
+                                &areas,
+                                &player_transforms_and_transform_helper.p1(),
+                            ) else {
+                                warn!(
+                                    "AvatarMove Move can't find position target {target_position_source:?}"
+                                );
+                                continue;
+                            };
+                            location
+                        }
+                    };
+
+                    // TODO: Walk there instead of teleporting there
+                    if let Ok(mut trans) = player_transforms_and_transform_helper
+                        .p0()
+                        .get_mut(target_entity)
+                    {
+                        trans.translation = target_position;
+                    } else {
+                        warn!(
+                            "AvatarMove target player {target:?} {target_entity:?} has no Transform for Move"
+                        );
+                    }
+                }
+                _ => info!("NYI: AvatarMove {event:?} (for {target:?})"),
+            }
         }
     }
+}
+
+// FIXME: This somewhat duplicates what action::spawn_character does
+fn named_trigger_location(
+    name: &str,
+    locators: &Query<(Entity, &Name), With<crate::magicka_level_model::Locator>>,
+    areas: &Query<(Entity, &Name), With<crate::magicka_level_model::TriggerArea>>,
+    transform_helper: &TransformHelper,
+) -> Option<Vec3> {
+    let (source_entity, sample_space) = if let Some((locator, _name)) =
+        locators.iter().find(|(_, n)| n.eq_ignore_ascii_case(name))
+    {
+        (locator, false)
+    } else if let Some((area, _name)) = areas.iter().find(|(_, n)| n.eq_ignore_ascii_case(name)) {
+        (area, true)
+    } else {
+        return None;
+    };
+
+    let source_transform = transform_helper
+        .compute_global_transform(source_entity)
+        .ok()?;
+    let location = if sample_space {
+        use rand::{SeedableRng as _, distr::uniform::SampleRange as _};
+        let mut rng = rand::rngs::SmallRng::from_os_rng();
+        let local_point = vec3(
+            (-1.0..=1.0).sample_single(&mut rng).unwrap(),
+            (-1.0..=1.0).sample_single(&mut rng).unwrap(),
+            (-1.0..=1.0).sample_single(&mut rng).unwrap(),
+        );
+        source_transform.transform_point(local_point)
+    } else {
+        source_transform.translation()
+    };
+    Some(location)
 }
 
 pub(crate) fn from_xml(
@@ -67,7 +165,10 @@ pub(crate) fn from_xml(
             } => {
                 let lowercase = name.local_name.to_ascii_lowercase();
                 let target = if let Some(player_index_text) = lowercase.strip_prefix("player")
-                    && let Ok(player_index) = player_index_text.parse::<u8>()
+                    && let Some(player_index) = player_index_text
+                        .parse::<u8>()
+                        .ok()
+                        .and_then(|n| n.checked_sub(1))
                 {
                     PlayerTarget::Index(player_index)
                 } else if lowercase == "playerid" {

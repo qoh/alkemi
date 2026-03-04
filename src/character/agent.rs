@@ -54,6 +54,9 @@ pub fn spawn_follower(
 
     world.entity_mut(follower).insert((
         Name::new("Follower"),
+        super::player::PlayerCharacter {
+            index: player_index,
+        },
         bevy_landmass::AgentTarget3d::Entity(target_entity),
     ));
 
