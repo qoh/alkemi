@@ -442,7 +442,7 @@ checksum = "b82608b43397affac139547dfa9beb3208034c53e1a3cfe5d4079db1af362104"
 dependencies = [
  "approx",
  "avian_derive",
- "bevy 0.18.0",
+ "bevy 0.18.1",
  "bevy_heavy",
  "bevy_math 0.18.0",
  "bevy_transform_interpolation",
@@ -520,9 +520,9 @@ dependencies = [
 
 [[package]]
 name = "bevy"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec689b5a79452b6f777b889bbff22d3216b82a8d2ab7814d4a0eb571e9938d97"
+checksum = "1fd310426290cec560221f9750c2f4484be4a8eeea7de3483c423329b465c40e"
 dependencies = [
  "bevy_dylib",
  "bevy_internal 0.18.0",
@@ -1070,7 +1070,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a67e005e291d427d8e5b8af871cb434f0b075e28b63c622282d500801391d651"
 dependencies = [
  "ansi-parser",
- "bevy 0.18.0",
+ "bevy 0.18.1",
  "bevy_console_derive",
  "bevy_egui 0.39.1",
  "clap",
@@ -1443,7 +1443,7 @@ version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71c847747635c33ff9c7af4821abe5d9be4f21b65b4e470ffaf6f45c0bc4deb4"
 dependencies = [
- "bevy 0.18.0",
+ "bevy 0.18.1",
  "bevy_enhanced_input_macros",
  "bitflags 2.10.0",
  "log",
@@ -1577,7 +1577,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d551e95cf661cfc74bd71faf16e7cc8eed7d21b7f0ac8ca8301426338e38be36"
 dependencies = [
  "anyhow",
- "bevy 0.18.0",
+ "bevy 0.18.1",
  "bitflags 2.10.0",
  "bytemuck",
  "fixedbitset",
@@ -2940,7 +2940,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88545c8b0fa8f3502b9a439c71fa6b596ee9e808bfb16f27a51c8c6f7405a657"
 dependencies = [
- "bevy 0.18.0",
+ "bevy 0.18.1",
  "serde",
 ]
 
@@ -7315,7 +7315,7 @@ name = "remagic_game"
 version = "0.0.0"
 dependencies = [
  "avian3d",
- "bevy 0.18.0",
+ "bevy 0.18.1",
  "bevy-inspector-egui 0.36.0",
  "bevy_asset_loader",
  "bevy_console",
