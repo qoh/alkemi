@@ -28,25 +28,57 @@ pub fn plugin(app: &mut App) {
 
 static CONTENT_DIR: OnceLock<PlatformPathBuf> = OnceLock::new();
 
-pub fn content_root() -> &'static PlatformPath {
-    const VAR: &str = "MAGICKA_CONTENT_DIR";
+const CONTENT_DIR_ENV_VAR: &str = "MAGICKA_CONTENT_DIR";
 
+pub fn content_root() -> &'static PlatformPath {
     CONTENT_DIR.get_or_init(|| {
-        match std::env::var_os(VAR) {
-            Some(dir) => {
-                match PlatformPathBuf::try_from(PathBuf::from(dir)) {
-                    Ok(dir) => dir,
-                    Err(dir) => panic!(
-                        "Magicka Content directory configured with {VAR} is not a valid path: {dir:?}"
-                    ),
-                }
-            }
-            // TODO: Automatically scan for game location
-            None => panic!(
-                "\n\nMagicka Content directory unknown. Set the {VAR} environment variable to the path to your Magicka install's Content directory.\n\n"
-            ),
-        }
+        content_dir_from_env().or_else(content_dir_from_steam).unwrap_or_else(||
+            panic!(
+                "\n\nError: Can't find Steam install of Magicka. Ensure it is installed, or set the {CONTENT_DIR_ENV_VAR} environment variable to the Content subdirectory of your Magicka install.\n\n"
+            )
+        )
     })
+}
+
+fn content_dir_from_env() -> Option<PlatformPathBuf> {
+    let dir = std::env::var_os(CONTENT_DIR_ENV_VAR)?;
+    match PlatformPathBuf::try_from(PathBuf::from(dir)) {
+        Ok(dir) => Some(dir),
+        Err(dir) => panic!(
+            "Magicka Content directory configured with {CONTENT_DIR_ENV_VAR} is not a valid path: {dir:?}"
+        ),
+    }
+}
+
+fn content_dir_from_steam() -> Option<PlatformPathBuf> {
+    match locate_magicka_install() {
+        Ok(Some(path)) => match PlatformPathBuf::try_from(path) {
+            Ok(path) => Some(path.join("Content")),
+            Err(path) => {
+                warn!(
+                    "Can't use Steam install of Magicka: Install location reported by Steam is not a valid path: {path:?}"
+                );
+                None
+            }
+        },
+        Ok(None) => {
+            warn!("Can't find Steam install of Magicka: Steam reports it is not installed.");
+            None
+        }
+        Err(e) => {
+            warn!("Can't find Steam install of Magicka: {e}");
+            None
+        }
+    }
+}
+
+fn locate_magicka_install() -> Result<Option<PathBuf>, steamlocate::Error> {
+    const APPID_MAGICKA: u32 = 42910;
+    let steam = steamlocate::SteamDir::locate()?;
+    let Some((app, library)) = steam.find_app(APPID_MAGICKA)? else {
+        return Ok(None);
+    };
+    Ok(Some(library.resolve_app_dir(&app)))
 }
 
 #[derive(Debug)]

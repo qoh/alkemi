@@ -5,8 +5,7 @@
 A sandbox playground for exploring and interpreting parts of Magicka, giving players an easier way to experiment with gameplay and content creation, and better modern platform hardware support.
 
 You must have Magicka 1 installed. This project doesn't provide any content, instead it directly loads from your existing copy of the game.  
-Set the `MAGICKA_CONTENT_DIR` environment variable to the path of the *Content* directory in your Magicka install.  
-On Linux, this is most commonly `~/.local/share/Steam/steamapps/common/Magicka/Content`. On Microsoft Windows, this is most commonly `C:\Program Files (x86)\Steam\steamapps\common\Magicka\Content`.
+If you've installed it with Steam it will be detected automatically. Otherwise you can set the `MAGICKA_CONTENT_DIR` environment variable to the *Content* subdirectory of your Magicka install.
 
 Inputs and shortcuts:
 - W, A, S, D - Move around
