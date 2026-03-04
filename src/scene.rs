@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader};
+use std::{fs::File, io::BufReader, sync::Arc};
 
 use bevy::prelude::*;
 use typed_path::{PlatformPath, PlatformPathBuf};
@@ -152,7 +152,7 @@ impl StartScene {
             for (priority, trigger) in scene.triggers.into_iter().enumerate() {
                 let mut trigger_commands = parent.spawn(crate::script_triggers::Trigger {
                     priority,
-                    conditions: trigger.conditions,
+                    conditions: Arc::new(trigger.conditions),
                     actions: trigger
                         .actions
                         .into_iter()

@@ -197,7 +197,7 @@ fn setup_animation(
     let (graph, node_index) = AnimationGraph::from_clip(clip);
     let graph = animation_graphs.add(graph);
     let mut player = AnimationPlayer::default();
-    player.play(node_index).repeat();
+    player.play(node_index).pause();
     part_commands.insert((
         player,
         target_id,

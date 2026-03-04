@@ -1,5 +1,6 @@
+use crate::script_triggers::{action::TriggerActionBehavior, condition::TriggerConditionLogic};
 use log::warn;
-use std::{cmp::Ordering, io::BufRead};
+use std::io::BufRead;
 use thiserror::Error;
 use xml::{EventReader, attribute::OwnedAttribute, name::OwnedName, reader::XmlEvent};
 
@@ -36,47 +37,9 @@ pub struct TriggerCondition {
 }
 
 #[derive(Debug)]
-pub enum TriggerConditionLogic {
-    Present {
-        area: Option<String>,
-        member_type: Option<String>,
-        include_invisible: bool,
-        compare_method: Ordering,
-        nr: i32,
-    },
-    Unknown,
-}
-
-#[derive(Debug)]
 pub struct TriggerAction {
     pub delay: f32,
     pub behavior: TriggerActionBehavior,
-}
-
-#[derive(Debug)]
-pub enum TriggerActionBehavior {
-    ChangeScene {
-        scene: Option<String>,
-        transition: SceneChangeTransition,
-        transition_time: f32,
-        spawn_players: bool,
-        spawn_point: Option<String>,
-        save_npcs: bool,
-    },
-    Spawn {
-        area: String,
-        type_name: String,
-        nr: u16,
-        id: Option<String>,
-    },
-    Unknown,
-}
-
-#[derive(Debug)]
-pub enum SceneChangeTransition {
-    None,
-    Fade,
-    CrossFade,
 }
 
 pub fn read_scene(reader: impl BufRead) -> Result<SceneConfig, SceneError> {
@@ -246,63 +209,22 @@ fn read_trigger_conditions(
 
 fn read_trigger_condition(
     name: OwnedName,
-    attributes: Vec<OwnedAttribute>,
+    mut attributes: Vec<OwnedAttribute>,
 ) -> Result<TriggerCondition, SceneError> {
     let mut invert = false;
-    for attr in &attributes {
-        if attr.name.local_name.eq_ignore_ascii_case("invert") && attr.name.namespace.is_none() {
+    attributes.retain_mut(|attr| {
+        if attr.name.namespace.is_some() {
+            false
+        } else if attr.name.local_name.eq_ignore_ascii_case("invert") {
             invert = attr.value.parse().unwrap();
+            false
+        } else {
+            true
         }
-    }
-    let logic = if name.local_name.eq_ignore_ascii_case("present") && name.namespace.is_none() {
-        let mut area = None;
-        let mut member_type = None;
-        let mut include_invisible = true;
-        let mut compare_method = Ordering::Equal;
-        let mut nr = 0;
-        for OwnedAttribute { name, value } in attributes {
-            if name.namespace.is_some() {
-                continue;
-            }
-            if name.local_name.eq_ignore_ascii_case("area") {
-                area = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("type") {
-                member_type = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("includeinvisible") {
-                include_invisible = value.parse().unwrap();
-            } else if name.local_name.eq_ignore_ascii_case("comparemethod") {
-                if value.eq_ignore_ascii_case("equal") {
-                    compare_method = Ordering::Equal;
-                } else if value.eq_ignore_ascii_case("less") {
-                    compare_method = Ordering::Less;
-                } else if value.eq_ignore_ascii_case("greater") {
-                    compare_method = Ordering::Greater;
-                } else {
-                    todo!("invalid trigger condition comparemethod error")
-                }
-            } else if name.local_name.eq_ignore_ascii_case("nr") {
-                nr = value.parse().unwrap();
-            }
-        }
-        TriggerConditionLogic::Present {
-            area,
-            member_type,
-            include_invisible,
-            compare_method,
-            nr,
-        }
-    } else {
-        warn!(
-            "Unhandled scene trigger condition type {:?}",
-            name.local_name
-        );
-        #[cfg(test)]
-        eprintln!(
-            "Unhandled scene trigger condition type {:?}",
-            name.local_name
-        );
-        TriggerConditionLogic::Unknown
-    };
+    });
+
+    let logic = crate::script_triggers::condition::read_logic(name, attributes)
+        .map_err(|_e| -> SceneError { todo!() })?;
     Ok(TriggerCondition { invert, logic })
 }
 
@@ -359,80 +281,7 @@ fn read_trigger_action(
         false
     });
 
-    let behavior = if name.local_name.eq_ignore_ascii_case("changescene") {
-        let mut scene: Option<String> = None;
-        let mut transition: SceneChangeTransition = SceneChangeTransition::Fade;
-        let mut transition_time: f32 = 1.;
-        let mut spawn_players: bool = false;
-        let mut spawn_point: Option<String> = None;
-        let mut save_npcs: bool = false;
-        for OwnedAttribute { name, value } in attributes {
-            if name.local_name.eq_ignore_ascii_case("scene") {
-                scene = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("transition") {
-                if value.eq_ignore_ascii_case("none") {
-                    transition = SceneChangeTransition::None;
-                } else if value.eq_ignore_ascii_case("fade") {
-                    transition = SceneChangeTransition::Fade;
-                } else if value.eq_ignore_ascii_case("crossfade") {
-                    transition = SceneChangeTransition::CrossFade;
-                } else {
-                    todo!("invalid changescene action transition error")
-                }
-            } else if name.local_name.eq_ignore_ascii_case("transitiontime") {
-                transition_time = value.parse().unwrap();
-            } else if name.local_name.eq_ignore_ascii_case("spawnplayers") {
-                spawn_players = value.parse().unwrap();
-            } else if name.local_name.eq_ignore_ascii_case("spawnpoint") {
-                spawn_point = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("savenpcs") {
-                save_npcs = value.parse().unwrap();
-            }
-        }
-        parser.skip()?;
-        TriggerActionBehavior::ChangeScene {
-            scene,
-            transition,
-            transition_time,
-            spawn_players,
-            spawn_point,
-            save_npcs,
-        }
-    } else if name.local_name.eq_ignore_ascii_case("spawn") {
-        let mut area: Option<String> = None;
-        let mut type_name: Option<String> = None;
-        let mut id: Option<String> = None;
-        let mut nr: u16 = 1;
-        for OwnedAttribute { name, value } in attributes {
-            if name.local_name.eq_ignore_ascii_case("area") {
-                area = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("type") {
-                type_name = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("id") {
-                id = Some(value);
-            } else if name.local_name.eq_ignore_ascii_case("nr") {
-                nr = value.parse().unwrap();
-            } else {
-                warn!(
-                    "Unhandled trigger spawn action attribute {:?}",
-                    name.local_name
-                );
-            }
-        }
-        parser.skip()?;
-        TriggerActionBehavior::Spawn {
-            area: area.unwrap(),
-            type_name: type_name.unwrap(),
-            id,
-            nr,
-        }
-    } else {
-        warn!("Unhandled scene trigger action type {:?}", name.local_name);
-        #[cfg(test)]
-        eprintln!("Unhandled scene trigger action type {:?}", name.local_name);
-        parser.skip()?;
-        TriggerActionBehavior::Unknown
-    };
+    let behavior = crate::script_triggers::action::read_behavior(parser, name, attributes)?;
 
     Ok(TriggerAction { delay, behavior })
 }

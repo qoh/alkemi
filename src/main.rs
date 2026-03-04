@@ -2,6 +2,7 @@ mod camera;
 mod character;
 mod components_basic;
 mod dev;
+mod dialog;
 mod gameplay;
 mod item;
 mod magicka_assets;
