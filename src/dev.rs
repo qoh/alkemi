@@ -188,10 +188,10 @@ fn suppress_enhanced_input(
 
     let egui_mouse_unused = !egui
         .iter_mut()
-        .any(|mut ctx| ctx.get_mut().wants_pointer_input());
+        .any(|mut ctx| ctx.get_mut().egui_wants_pointer_input());
     let egui_keyboard_unused = !egui
         .iter_mut()
-        .any(|mut ctx| ctx.get_mut().wants_keyboard_input());
+        .any(|mut ctx| ctx.get_mut().egui_wants_keyboard_input());
 
     let mouse_unused = bevy_mouse_unused && egui_mouse_unused;
     let keyboard_unused = egui_keyboard_unused;

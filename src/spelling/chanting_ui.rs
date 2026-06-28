@@ -53,7 +53,10 @@ fn spawn_bar(
             .unwrap()
     };
     let hud_path = hud_path.as_ref() as &std::ffi::OsStr;
-    let hud_image = assets.load_override(bevy::asset::AssetPath::from_path(hud_path.as_ref()));
+    let hud_image = assets
+        .load_builder()
+        .override_unapproved()
+        .load(bevy::asset::AssetPath::from_path(hud_path.as_ref()));
     let hud_atlas = assets.add(hud_atlas_layout());
 
     commands

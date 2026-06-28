@@ -95,7 +95,7 @@ fn setup_scenes(app: &mut App) {
                     spawn_point: Some("start".to_owned()),
                 });
             })
-            .run_if(input_just_pressed(input).and(input_pressed(KeyCode::AltLeft))),
+            .run_if(input_just_pressed(input).and_then(input_pressed(KeyCode::AltLeft))),
         );
     }
 

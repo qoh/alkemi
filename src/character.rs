@@ -274,7 +274,7 @@ pub(crate) fn spawn_character(
             .spawn((
                 ChildOf(player_entity),
                 Name::new(format!("Item Slot {}", equip.character_slot)),
-                ItemInstance(assets.load_override(asset_path)),
+                ItemInstance(assets.load_builder().override_unapproved().load(asset_path)),
                 DeferredAttachedItem {
                     bone_name: equip.bone_name.clone(),
                     skeleton: attached_model.skeleton,

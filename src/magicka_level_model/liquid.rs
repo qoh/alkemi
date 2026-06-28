@@ -164,12 +164,17 @@ fn translate_effect_liquid(
         // normal_map_channel: todo!(),
         // normal_map_texture: todo!(),
         normal_map_texture: if !water_normal_map.path.is_empty() {
-            Some(assets.load_with_settings_override(
-                find_image(water_normal_map.path.as_str(), content_path),
-                |s: &mut crate::magicka_assets::image::MagickaTexture2dLoaderSettings| {
-                    s.is_srgb = false;
-                },
-            ))
+            Some(
+                assets
+                    .load_builder()
+                    .with_settings(
+                        |s: &mut crate::magicka_assets::image::MagickaTexture2dLoaderSettings| {
+                            s.is_srgb = false;
+                        },
+                    )
+                    .override_unapproved()
+                    .load(find_image(water_normal_map.path.as_str(), content_path)),
+            )
         } else {
             None
         },

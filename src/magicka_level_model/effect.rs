@@ -50,7 +50,7 @@ pub(crate) fn translate_effect_deferred(
     assets: &AssetServer,
 ) -> (Option<StandardMaterial>, VertexColorState) {
     let base_color_texture = if !effect.Layer0.DiffuseTexture0.path.is_empty() {
-        Some(assets.load_override(find_image(
+        Some(assets.load_builder().override_unapproved().load(find_image(
             effect.Layer0.DiffuseTexture0.path.as_str(),
             content_path,
         )))
@@ -58,12 +58,20 @@ pub(crate) fn translate_effect_deferred(
         None
     };
     let normal_map_texture = if !effect.Layer0.NormalTexture0.path.is_empty() {
-        Some(assets.load_with_settings_override(
-            find_image(effect.Layer0.NormalTexture0.path.as_str(), content_path),
-            |s: &mut crate::magicka_assets::image::MagickaTexture2dLoaderSettings| {
-                s.is_srgb = false;
-            },
-        ))
+        Some(
+            assets
+                .load_builder()
+                .with_settings(
+                    |s: &mut crate::magicka_assets::image::MagickaTexture2dLoaderSettings| {
+                        s.is_srgb = false;
+                    },
+                )
+                .override_unapproved()
+                .load(find_image(
+                    effect.Layer0.NormalTexture0.path.as_str(),
+                    content_path,
+                )),
+        )
     } else {
         None
     };
@@ -151,9 +159,12 @@ pub(crate) fn translate_effect_additive(
 ) -> (Option<StandardMaterial>, VertexColorState) {
     let material = StandardMaterial {
         base_color: Srgba::from_vec3(map_vec3(effect.ColorTint)).into(),
-        base_color_texture: effect
-            .TextureEnabled
-            .then(|| assets.load_override(find_image(&effect.Texture.path, content_path))),
+        base_color_texture: effect.TextureEnabled.then(|| {
+            assets
+                .load_builder()
+                .override_unapproved()
+                .load(find_image(&effect.Texture.path, content_path))
+        }),
         alpha_mode: AlphaMode::Add,
         ..default()
     };
@@ -201,18 +212,23 @@ pub(crate) fn translate_effect_skinned_model_basic(
             let base = StandardMaterial {
                 base_color,
                 base_color_texture: if diffuse_map_0_enabled && let Some(tex_ref) = diffuse_map_0 {
-                    Some(assets.load_override(find_image(tex_ref.path.as_str(), content_path)))
+                    Some(
+                        assets
+                            .load_builder()
+                            .override_unapproved()
+                            .load(find_image(tex_ref.path.as_str(), content_path)),
+                    )
                 } else {
                     None
                 },
                 emissive,
                 normal_map_texture: if normal_map_enabled && let Some(tex_ref) = normal_map {
-                    Some(assets.load_with_settings_override(
-                        find_image(tex_ref.path.as_str(), content_path),
-                        |s: &mut crate::magicka_assets::image::MagickaTexture2dLoaderSettings| {
-                            s.is_srgb = false;
-                        },
-                    ))
+                    Some(
+                        assets.load_builder()
+                            .with_settings(|s: &mut crate::magicka_assets::image::MagickaTexture2dLoaderSettings| { s.is_srgb = false; })
+                            .override_unapproved()
+                            .load(find_image(tex_ref.path.as_str(), content_path))
+                    )
                 } else {
                     None
                 },
