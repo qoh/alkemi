@@ -9,6 +9,7 @@ use crate::xnb::{Stream, quicklist, types::*};
 
 pub type ConditionCollection = Vec<EventCollection>;
 
+#[expect(dead_code)] // ?
 #[derive(Debug)]
 pub struct EventCollection {
     pub condition: EventCondition,
@@ -16,6 +17,7 @@ pub struct EventCollection {
     pub event_storages: Vec<EventStorage>,
 }
 
+#[expect(dead_code)] // ?
 #[derive(Debug)]
 pub struct EventCondition {
     pub condition_type: u8,

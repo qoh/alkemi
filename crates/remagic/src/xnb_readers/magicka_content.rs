@@ -23,7 +23,6 @@ use winnow::{
     binary::length_repeat,
     combinator::{cond, repeat, seq},
     error::{ContextError, StrContext, StrContextValue},
-    stream::Location,
 };
 
 #[derive(Debug)]
@@ -252,6 +251,7 @@ fn liquid(input: &mut Stream) -> Result<Liquid> {
     })
 }
 #[derive(Debug)]
+#[expect(clippy::large_enum_variant)] // variant size difference because LavaEffect is not yet impld
 pub enum LiquidEffect {
     DeferredLiquid(DeferredLiquidEffect),
     Lava(LavaEffect),

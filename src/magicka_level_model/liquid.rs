@@ -17,8 +17,8 @@ pub(crate) fn spawn_liquid(
     Spawner::Parent(parent): Spawner,
     liquid: &remagic::xnb_readers::magicka_content::Liquid,
     content_path: &PlatformPath,
-    mut meshes: &mut Assets<Mesh>,
-    mut materials: &mut Assets<StandardMaterial>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
     assets: &AssetServer,
 ) -> Entity {
     let liquid_component = Liquid {

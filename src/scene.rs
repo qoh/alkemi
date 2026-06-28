@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use typed_path::{PlatformPath, PlatformPathBuf};
 
 use crate::{
-    magicka_scene::{SceneConfig, Trigger, read_scene},
+    magicka_scene::{SceneConfig, read_scene},
     script_triggers::{ActionState, AutoEvaluateCriterion, TriggerAutoEvaluate},
 };
 

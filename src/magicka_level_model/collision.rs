@@ -38,6 +38,5 @@ pub fn to_collider_raw(
             ]
         })
         .collect();
-    let collider = Collider::trimesh(vertices, indices);
-    collider
+    Collider::trimesh(vertices, indices)
 }

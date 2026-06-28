@@ -1,3 +1,5 @@
+#![allow(unused_variables)] // TODO: Figure out these unused warnings?
+
 use num_enum::TryFromPrimitive;
 use winnow::{
     Parser, Result,
@@ -6,12 +8,9 @@ use winnow::{
     error::{ContextError, StrContext, StrContextValue},
 };
 
-use crate::{
-    xnb::{
-        SharedResourceReference, Stream, TypeReaderMeta, object, object_any, shared_resource_ref,
-        types::*,
-    },
-    xnb_readers::magicka_effect::Effect,
+use crate::xnb::{
+    SharedResourceReference, Stream, TypeReaderMeta, object, object_any, shared_resource_ref,
+    types::*,
 };
 
 #[derive(Debug)]

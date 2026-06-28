@@ -151,9 +151,9 @@ pub(crate) fn spawn_character(
     mut template_name_table: ResMut<TemplateAssetsTable>,
     mut templates: ResMut<Assets<TemplateAsset>>,
     mut commands: Commands,
-    mut model_cache: ResMut<model::ModelCache>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    model_cache: ResMut<model::ModelCache>,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
     nav_mesh_archipelago: Option<
         Single<Entity, With<bevy_landmass::Archipelago<bevy_landmass::coords::ThreeD>>>,
     >,
@@ -324,9 +324,9 @@ fn select_animation(
             let actual_move_length = move_length; // TODO: Use LinearVelocity relative to ground?
             if actual_move_length >= 0.6 {
                 "move_run"
-            } else if actual_move_length < 0.4 {
-                "move_walk"
-            } else if current_anim != "move_run" && current_anim != "move_walk" {
+            } else if (actual_move_length < 0.4)
+                || (current_anim != "move_run" && current_anim != "move_walk")
+            {
                 "move_walk"
             } else {
                 current_anim

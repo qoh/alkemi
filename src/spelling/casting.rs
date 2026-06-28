@@ -87,6 +87,7 @@ fn start_cast(
                 };
                 spell
             }
+            #[expect(clippy::diverging_sub_expression, unreachable_code)] // Not yet implemented
             CastType::Magick => {
                 let magick = {
                     // TODO: Resolve magick

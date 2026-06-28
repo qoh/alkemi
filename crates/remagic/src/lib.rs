@@ -14,8 +14,6 @@ pub mod xnb_readers {
     pub mod xna_tex;
 }
 
-use winnow::Parser;
-
 use crate::{
     xnb::{XnbAsset, object},
     xnb_readers::xna_tex::Texture2d,

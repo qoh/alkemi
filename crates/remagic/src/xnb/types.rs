@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use winnow::{
     Parser as _, Result,
     binary::{le_f32, le_i32, length_take},
-    combinator::{alt, seq},
+    combinator::seq,
 };
 
 use crate::xnb::TypeReaderMeta;

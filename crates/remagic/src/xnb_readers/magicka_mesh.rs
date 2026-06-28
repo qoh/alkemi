@@ -4,19 +4,17 @@
 use crate::{
     xnb::{
         Stream, TypeReaderMeta, object,
-        types::{ExternalReference, Vector2, Vector3, bool, external_ref, f32, i32, vec2, vec3},
+        types::{Vector3, bool, f32, i32, vec3},
     },
     xnb_readers::magicka_effect::{Effect, effect},
     xnb_readers::xna_mesh::{
-        IndexBuffer, Texture2d, TextureCube, VertexBuffer, VertexDeclaration, index_buffer,
-        vertex_buffer, vertex_decl,
+        IndexBuffer, VertexBuffer, VertexDeclaration, index_buffer, vertex_buffer, vertex_decl,
     },
 };
 use winnow::{
     Parser as _, Result,
     binary::length_repeat,
-    combinator::{alt, cond, seq},
-    error::StrContext,
+    combinator::{cond, seq},
 };
 
 /// BiTreeModel
@@ -184,7 +182,9 @@ pub fn write_to_obj(model: BiTreeModel) {
                     writeln!(out_mtl, "  Ns {}", effect.Layer0.SpecPower0).unwrap();
                     writeln!(out_mtl, "  Ke {}", effect.Layer0.EmissiveAmount0).unwrap();
                     writeln!(out_mtl, "  Pm {}", effect.Layer0.Reflectiveness0).unwrap();
-                    if let Some(layer1) = effect.Layer1.as_ref() { /* todo */ }
+                    if let Some(_layer1) = effect.Layer1.as_ref() {
+                        // TODO: do something with layer 1?
+                    }
                 }
                 _ => todo!(),
             }

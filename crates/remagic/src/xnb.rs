@@ -7,19 +7,15 @@ use std::marker::PhantomData;
 use lzxd::{Lzxd, WindowSize};
 use winnow::{
     Bytes, LocatingSlice, Parser, Result, Stateful,
-    binary::{be_u16, le_u32, length_repeat, length_take, u8},
-    combinator::{repeat, seq, todo},
-    error::{
-        AddContext, ContextError, ErrMode, FromExternalError, ParseError, ParserError, StrContext,
-        StrContextValue,
-    },
+    binary::{le_u32, length_repeat, u8},
+    combinator::seq,
+    error::{ContextError, FromExternalError, ParseError},
     stream::Stream as _,
-    token::{any, rest, take},
+    token::{rest, take},
 };
 
 use crate::xnb::types::{i32, string};
 
-#[allow(unused)]
 pub(crate) fn parse<'i, O, P: for<'d> Parser<Stream<'d>, O, ContextError>>(
     bytes: &'i [u8],
     primary: P,
@@ -34,7 +30,6 @@ pub(crate) fn parse<'i, O, P: for<'d> Parser<Stream<'d>, O, ContextError>>(
     parse_xnb(primary).parse(stream)
 }
 
-// #[allow(unused)]
 // pub(crate) fn parse(
 //     bytes: &'_ [u8],
 // ) -> Result<Option<crate::xnb_readers::magicka_content::Level>, ParseError<Stream<'_>, ContextError>>
@@ -57,16 +52,11 @@ struct Header {
     // version: u8,
     flags: u8,
     /// This should match the size of the whole file, including the header
-    file_size: u32,
+    _file_size: u32,
 }
 
-const HEADER_FLAG_HIDEF_PROFILE: u8 = 1 << 0;
 const HEADER_FLAG_COMPRESSED_LZ4: u8 = 1 << 7;
 const HEADER_FLAG_COMPRESSED_LZX: u8 = 1 << 7;
-
-enum HeaderFlags {
-    Compressed = 0x80,
-}
 
 // pub type Stream<'i> = &'i Bytes;
 // pub type Stream<'i> = Stateful<&'i Bytes, State<'i>>;
@@ -200,7 +190,7 @@ where
             platform: u8,
             _: 4, // Version
             flags: u8,
-            file_size: le_u32,
+            _file_size: le_u32,
         })
         .parse_next(input)?;
         if header.platform != 119 {
@@ -498,7 +488,6 @@ where
     TypeReader: Parser<Stream<'i>, Type, ContextError>,
 {
     fn parse_next(&mut self, input: &mut Stream<'i>) -> Result<Option<Type>, ContextError> {
-        let start = input.checkpoint();
         let type_id = int_7bitenc.try_map(usize::try_from).parse_next(input)?;
         if type_id == 0 {
             return Ok(None);
@@ -625,9 +614,9 @@ fn compressed_lxz(input: &mut Stream) -> winnow::Result<Box<[u8]>> {
         // *input = rest;
         let decompressed_block = lzxd
             .decompress_next(block, frame_size as usize)
-            .map_err(|e| todo!())?;
+            .map_err(|_e| todo!())?;
 
-        let (mut write_into, rest_remaining) = remaining_decompressed
+        let (write_into, rest_remaining) = remaining_decompressed
             .split_at_mut_checked(decompressed_block.len())
             .ok_or_else(|| todo!())?;
         remaining_decompressed = rest_remaining;

@@ -3,7 +3,7 @@ use remagic::xnb_readers::{
     magicka_effect::{AdditiveEffect, DeferredEffect, Effect},
     skinning::SkinnedModelBasicEffect,
 };
-use typed_path::{PlatformPath, PlatformPathBuf};
+use typed_path::PlatformPath;
 
 use crate::magicka_level_model::map_vec3;
 
@@ -238,7 +238,6 @@ pub(crate) fn translate_effect_skinned_model_basic(
                 base,
                 extension: CharacterExtension {
                     color: LinearRgba::rgb(240. / 255., 20. / 255., 20. / 255.),
-                    ..default()
                 },
             };
             (Some(material), VertexColorState::Enabled)

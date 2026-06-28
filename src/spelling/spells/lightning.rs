@@ -4,12 +4,11 @@ use std::{
     time::Duration,
 };
 
-use avian3d::prelude::{Collider, PhysicsLayer, SpatialQuery, SpatialQueryFilter};
+use avian3d::prelude::{Collider, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
-use rand::Rng;
 
 use crate::{
-    components_basic::{Elapsed, Lifetime},
+    components_basic::Lifetime,
     magicka_level_model::Layers,
     spelling::{
         element::{Element, Magnitudes},

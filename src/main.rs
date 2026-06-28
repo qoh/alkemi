@@ -1,5 +1,10 @@
+// Common in Bevy projects due to queries and systems
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
+// TODO: Deal with these warnings
+#![expect(unused_variables)]
+#![expect(dead_code)]
 // TODO: Remove this when bevy_seedling updates to support bevy 0.19, since we disable it with an invalid #[cfg(feature)]
-#![allow(unexpected_cfgs)]
+#![expect(unexpected_cfgs)]
 
 mod camera;
 mod character;
@@ -128,7 +133,7 @@ pub(crate) enum LoadState {
 #[derive(Component)]
 pub struct PlayerControlled;
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 fn update_cursor_grab(
     windows: Single<
         (&mut CursorOptions, &Window),

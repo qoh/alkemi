@@ -1,10 +1,5 @@
 use num_enum::TryFromPrimitive;
-use winnow::{
-    Parser, Result,
-    binary::length_repeat,
-    combinator::{cond, repeat, seq},
-    error::ContextError,
-};
+use winnow::{Parser, Result, combinator::seq};
 
 use crate::{
     xnb::{
@@ -14,7 +9,7 @@ use crate::{
     xnb_readers::{
         magicka_content::{AnimationChannel, Pose, animation_channel},
         xna_mesh::{Model, model},
-        xna_tex::{Texture2d, texture_2d},
+        xna_tex::Texture2d,
     },
 };
 

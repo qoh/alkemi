@@ -42,7 +42,7 @@ pub(crate) fn effect(input: &mut Stream) -> Result<Option<Effect>> {
     .parse_next(input)
 }
 
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 #[derive(Debug)]
 pub struct DeferredEffect {
     pub Alpha: f32,
@@ -53,7 +53,7 @@ pub struct DeferredEffect {
     pub Layer0: DeferredEffectLayer,
     pub Layer1: Option<DeferredEffectLayer>,
 }
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 #[derive(Debug)]
 pub struct DeferredEffectLayer {
     pub DiffuseTexture0AlphaDisabled: bool,
@@ -68,7 +68,7 @@ pub struct DeferredEffectLayer {
     pub MaterialTexture0: ExternalReference<Texture2d>,
     pub NormalTexture0: ExternalReference<Texture2d>,
 }
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 pub(crate) fn deferred_effect(input: &mut Stream) -> Result<DeferredEffect> {
     pub fn layer(input: &mut Stream) -> Result<DeferredEffectLayer> {
         seq!(DeferredEffectLayer {
@@ -103,7 +103,7 @@ impl TypeReaderMeta for DeferredEffect {
     const VERSION: i32 = 0;
 }
 
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 #[derive(Debug)]
 pub struct AdditiveEffect {
     pub ColorTint: Vector3,
@@ -111,7 +111,7 @@ pub struct AdditiveEffect {
     pub TextureEnabled: bool,
     pub Texture: ExternalReference<Texture2d>,
 }
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 fn additive_effect(input: &mut Stream) -> Result<AdditiveEffect> {
     seq!(AdditiveEffect {
         ColorTint: vec3,
@@ -180,7 +180,6 @@ fn deferred_liquid_effect(input: &mut Stream) -> Result<DeferredLiquidEffect> {
     .parse_next(input)
 }
 
-#[allow(non_snake_case)]
 #[derive(Debug)]
 pub struct LavaEffect {}
 fn lava_effect(input: &mut Stream) -> Result<LavaEffect> {

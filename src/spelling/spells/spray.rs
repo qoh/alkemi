@@ -111,7 +111,7 @@ fn gizmo_circular_segment(
     let right = vec3(right.y, 0., right.x);
     gizmos.line(
         isometry.transform_point(Vec3A::ZERO).to_vec3(),
-        { isometry.transform_point(left.to_vec3a()).to_vec3() },
+        isometry.transform_point(left.to_vec3a()).to_vec3(),
         color,
     );
     gizmos.line(

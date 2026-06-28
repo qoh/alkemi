@@ -4,8 +4,8 @@ use crate::magicka_level_model::map_vec3;
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_landmass::{
     Archipelago3d, ArchipelagoOptions, ArchipelagoRef3d, FromAgentRadius as _, Island,
-    Island3dBundle, Landmass3dPlugin, NavMesh3d, NavMeshHandle, NavigationMesh3d,
-    PointSampleDistance3d, ValidationError, Velocity3d, coords::ThreeD,
+    Island3dBundle, Landmass3dPlugin, NavMesh3d, NavMeshHandle, NavigationMesh3d, ValidationError,
+    Velocity3d, coords::ThreeD,
 };
 use remagic::xnb_readers::magicka_content::{NavMesh as MagickaNavMesh, PathFindingTriangle};
 

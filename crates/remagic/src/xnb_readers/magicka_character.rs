@@ -1,21 +1,16 @@
 use std::collections::HashMap;
 
-use num_enum::TryFromPrimitive;
 use winnow::{
     Parser, Result,
     binary::length_repeat,
     combinator::{cond, repeat, seq},
-    error::{ContextError, StrContext, StrContextValue},
+    error::{StrContext, StrContextValue},
     stream::Stream as _,
 };
 
 use crate::{
     xnb::{Stream, TypeReaderMeta, quicklist, types::*},
-    xnb_readers::{
-        magicka_common::{aura, special_ability},
-        skinning::SkinnedModel,
-        xna_mesh::Model,
-    },
+    xnb_readers::{magicka_common::special_ability, skinning::SkinnedModel, xna_mesh::Model},
 };
 
 // External reference types
@@ -68,6 +63,8 @@ pub struct CharacterTemplate {
     pub summon_element_cue_string: String,
     pub resistances: Vec<(i32, f32, f32, bool)>, // (elements, multiplier, modifier, status_resistance)
     */
+    // TODO: Dedicated type for this, like `struct CharacterModel`?
+    #[expect(clippy::type_complexity)]
     pub skinned_models: (
         Vec<(ExternalReference<SkinnedModel>, f32, Vector3)>, // (model, scale, tint)
         ExternalReference<SkinnedModel>,                      // skeleton
@@ -110,6 +107,7 @@ impl TypeReaderMeta for CharacterTemplate {
     const VERSION: i32 = 0;
 }
 
+#[expect(unused_variables)] // No proper struct bindings yet
 pub fn character_template(input: &mut Stream) -> Result<CharacterTemplate> {
     let (id, display_id) = (
         string.map(ToOwned::to_owned), // id
@@ -621,6 +619,7 @@ fn equip(input: &mut Stream) -> Result<CharacterEquip> {
     .parse_next(input)
 }
 
+#[expect(dead_code)] // TODO: Parse character abilities. Last I checked it still crashes a bit, so not used yet
 fn ability(input: &mut Stream) -> Result<Ability> {
     let (type_name, cooldown, target, fuzzy_expression, animation_keys) = (
         string,
@@ -740,7 +739,7 @@ fn ability(input: &mut Stream) -> Result<Ability> {
     })
 }
 
-pub fn buff(input: &mut Stream) -> Result<()> {
+pub fn buff(_input: &mut Stream) -> Result<()> {
     todo!()
 }
 

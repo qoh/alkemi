@@ -29,7 +29,7 @@ pub fn plugin(app: &mut App) {
             animated_parts::debug_animated_parts,
             visual_effects::debug_visual_effects,
             visual_effects::assign_visual_effect_scene,
-            debug_trigger_areas,
+            // debug_trigger_areas,
             debug_locators,
         ),
     );
@@ -216,7 +216,7 @@ enum Spawner<'w, /*'s,*/ 'r> {
 
 fn debug_trigger_areas(q: Query<&GlobalTransform, With<TriggerArea>>, mut gizmos: Gizmos) {
     for transform in q {
-        // gizmos.cuboid(*transform, Color::srgb(0., 1., 0.));
+        gizmos.cube(*transform, Color::srgb(0., 1., 0.));
     }
 }
 

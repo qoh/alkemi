@@ -151,7 +151,7 @@ fn named_trigger_location(
 }
 
 pub(crate) fn from_xml(
-    attributes: Vec<xml::attribute::OwnedAttribute>,
+    _attributes: Vec<xml::attribute::OwnedAttribute>,
     parser: &mut xml::EventReader<impl std::io::Read>,
 ) -> Result<AvatarMove, ()> {
     let mut targets = Vec::new();

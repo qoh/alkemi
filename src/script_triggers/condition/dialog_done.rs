@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[allow(dead_code)] // TODO: Start dialog action
+#[expect(dead_code)] // TODO: Start dialog action
 #[derive(Clone, Debug)]
 pub(crate) struct TriggerConditionDialogDone {
     pub dialog: String,
