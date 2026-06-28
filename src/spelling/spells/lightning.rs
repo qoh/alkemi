@@ -367,7 +367,7 @@ mod vfx {
         mut materials: ResMut<Assets<StandardMaterial>>,
         mut commands: Commands,
     ) {
-        let mut rng = rand::rngs::SmallRng::from_os_rng();
+        let mut rng: rand::rngs::SmallRng = rand::make_rng();
 
         let [source_position, target_position] = event.path.vertices;
         let distance = source_position.distance(target_position);
@@ -589,7 +589,7 @@ mod vfx {
     ) {
         for (temperature, material_handle) in temperatures {
             debug_assert!(material_handle.is_strong());
-            let Some(material) = materials.get_mut(material_handle) else {
+            let Some(mut material) = materials.get_mut(material_handle) else {
                 continue;
             };
             let [x, y, z] = blackbody::temperature_to_xyz(temperature.temperature);

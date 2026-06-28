@@ -26,7 +26,7 @@ pub fn spawn_visual_effect(
         Visibility::default(),
         VisualEffect {
             // TODO: Find the visual effect by name in the Effects/ folders
-            asset: Handle::Uuid(AssetId::<Scene>::INVALID_UUID, std::marker::PhantomData),
+            asset: Handle::Uuid(AssetId::<WorldAsset>::INVALID_UUID, std::marker::PhantomData),
             effect: visual_effect.effect.clone(),
             range: visual_effect.range,
         },
@@ -34,7 +34,7 @@ pub fn spawn_visual_effect(
 }
 
 #[derive(Component, Debug, Reflect)]
-#[require(SceneRoot(Handle::Uuid(AssetId::<Scene>::INVALID_UUID, std::marker::PhantomData)))]
+#[require(WorldAssetRoot(Handle::Uuid(AssetId::<WorldAsset>::INVALID_UUID, std::marker::PhantomData)))]
 pub struct VisualEffect {
     pub asset: Handle<crate::magicka_assets::visual_effect::VisualEffect>,
     pub effect: String,
@@ -51,7 +51,7 @@ impl AsAssetId for VisualEffect {
 
 type ChangedOrAsset<C> = Or<(Changed<C>, AssetChanged<C>)>;
 pub fn assign_visual_effect_scene(
-    effects: Query<(&VisualEffect, &mut SceneRoot), ChangedOrAsset<VisualEffect>>,
+    effects: Query<(&VisualEffect, &mut WorldAssetRoot), ChangedOrAsset<VisualEffect>>,
     visual_effects: Res<Assets<crate::magicka_assets::visual_effect::VisualEffect>>,
 ) {
     for (effect, mut effect_scene_root) in effects {
@@ -59,7 +59,10 @@ pub fn assign_visual_effect_scene(
             .get(&effect.asset)
             .map(|e| e.scene.clone())
             .unwrap_or_else(|| {
-                Handle::Uuid(AssetId::<Scene>::INVALID_UUID, std::marker::PhantomData)
+                Handle::Uuid(
+                    AssetId::<WorldAsset>::INVALID_UUID,
+                    std::marker::PhantomData,
+                )
             });
         if effect_scene_root.0 != scene {
             effect_scene_root.0 = scene;

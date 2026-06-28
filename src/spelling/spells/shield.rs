@@ -308,7 +308,7 @@ fn spawn_collapse_effect(
         PointLight {
             color: LinearRgba::rgb(1., 0.9, 0.7).into(),
             intensity: 0.,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         FadePointLight {

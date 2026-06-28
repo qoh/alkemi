@@ -25,10 +25,11 @@ struct NextScene {
     change_command: ChangeScene,
 }
 
-pub fn change_to_next_scene(world: &mut World) {
+pub fn change_to_next_scene(world: &mut World) -> Result {
     if let Some(next_scene) = world.remove_resource::<NextScene>() {
-        next_scene.change_command.apply(world);
+        next_scene.change_command.apply(world)?;
     }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -40,7 +41,9 @@ pub struct ChangeScene {
 }
 
 impl Command for ChangeScene {
-    fn apply(self, world: &mut World) {
+    type Out = Result;
+
+    fn apply(self, world: &mut World) -> Result {
         let existing_scenes: Vec<_> = world
             .query_filtered::<Entity, With<Scene>>()
             .iter(world)
@@ -54,7 +57,8 @@ impl Command for ChangeScene {
             spawn_players: self.spawn_players,
             spawn_point: self.spawn_point,
         };
-        start_command.apply(world);
+        start_command.apply(world)?;
+        Ok(())
     }
 }
 
@@ -67,7 +71,9 @@ pub struct StartScene {
 }
 
 impl Command for StartScene {
-    fn apply(self, world: &mut World) {
+    type Out = Result;
+
+    fn apply(self, world: &mut World) -> Result {
         use std::ffi::OsStr;
 
         // Locate the file containing scene config
@@ -101,7 +107,9 @@ impl Command for StartScene {
         if spawn_result.is_err() {
             world.despawn(scene_entity);
         }
+        // TODO: Turn into actual result
         spawn_result.unwrap();
+        Ok(())
     }
 }
 

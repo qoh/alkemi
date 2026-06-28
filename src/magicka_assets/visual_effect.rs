@@ -12,7 +12,7 @@ use xml::{EventReader, ParserConfig, reader::XmlEvent};
 #[derive(Asset, Reflect, Debug)]
 #[reflect(from_reflect = false)]
 pub struct VisualEffect {
-    pub scene: Handle<Scene>,
+    pub scene: Handle<WorldAsset>,
 }
 
 #[derive(Default, TypePath)]
@@ -75,7 +75,7 @@ pub enum VisualEffectLoaderError {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct VisualEffectLoaderSettings;
 
-fn create_scene(effect: &Effect, load_context: &mut LoadContext) -> Scene {
+fn create_scene(effect: &Effect, load_context: &mut LoadContext) -> WorldAsset {
     let mut world = World::default();
 
     // TODO:
@@ -99,7 +99,7 @@ fn create_scene(effect: &Effect, load_context: &mut LoadContext) -> Scene {
         // TODO: Spawn light
     }
 
-    Scene::new(world)
+    WorldAsset::new(world)
 }
 
 fn create_emitter_effect(emitter: &Emitter, load_context: &mut LoadContext) -> EffectAsset {

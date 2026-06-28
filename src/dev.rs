@@ -157,6 +157,7 @@ impl<'w> DevToolsInfo<'w> {
 struct InspectorVisible(bool);
 
 fn setup_egui(mut commands: Commands, mut egui_global_settings: ResMut<EguiGlobalSettings>) {
+    // FIXME?: Bevy UI draws on this Camera because it has the highest order. Consider adding IsDefaultUiCamera to the normal camera.
     // Disable the automatic creation of a primary context to set it up manually.
     egui_global_settings.auto_create_primary_context = false;
     commands.spawn((
@@ -166,8 +167,7 @@ fn setup_egui(mut commands: Commands, mut egui_global_settings: ResMut<EguiGloba
         RenderLayers::none(),
         Camera {
             order: 1,
-            clear_color: ClearColorConfig::None,
-            // Prevent flicker when switching main camera
+            clear_color: ClearColorConfig::Custom(Color::linear_rgba(0., 0., 0., 0.)),
             output_mode: CameraOutputMode::Write {
                 blend_state: Some(BlendState::ALPHA_BLENDING),
                 clear_color: ClearColorConfig::None,

@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 // HACK: Workaround for AssetServer not permitting insert of loaded assets with path
 #[derive(Resource, Default, Debug)]
 pub struct ModelCache {
-    by_path_in_content: std::collections::HashMap<PlatformPathBuf, Handle<Scene>>,
+    by_path_in_content: std::collections::HashMap<PlatformPathBuf, Handle<WorldAsset>>,
 }
 
 #[derive(Debug)]
@@ -58,7 +58,7 @@ pub(super) fn attach_model(
         .spawn((
             ChildOf(player_entity),
             Transform::from_translation(Vec3::Y * -0.5 * full_height) * relative_transform,
-            SceneRoot(skeleton_scene),
+            WorldAssetRoot(skeleton_scene),
             Visibility::Hidden,
         ))
         .id();
@@ -72,7 +72,10 @@ pub(super) fn attach_model(
         materials.reborrow(),
         assets,
     );
-    player.with_child((SceneRoot(visual_scene), CopiesSkinnedMeshFrom(skeleton_ent)));
+    player.with_child((
+        WorldAssetRoot(visual_scene),
+        CopiesSkinnedMeshFrom(skeleton_ent),
+    ));
 
     AttachedModel {
         skeleton: skeleton_ent,
@@ -86,7 +89,7 @@ fn get_or_load_model(
     mut meshes: Mut<Assets<Mesh>>,
     mut materials: Mut<Assets<StandardMaterial>>,
     assets: &AssetServer,
-) -> Handle<Scene> {
+) -> Handle<WorldAsset> {
     let relative_path = typed_path::WindowsPathBuf::from(relative_path);
     let model_content_path = content_path.parent().unwrap().join(
         relative_path
@@ -95,7 +98,7 @@ fn get_or_load_model(
             .as_bytes(),
     );
     if let Some(handle) = cache.by_path_in_content.get(model_content_path.as_path()) {
-        return (handle as &Handle<Scene>).clone();
+        return (handle as &Handle<WorldAsset>).clone();
     }
 
     let handle = load_model(
@@ -115,7 +118,7 @@ fn load_model(
     materials: &mut Assets<StandardMaterial>,
     assets: &AssetServer,
     model_content_path: &PlatformPath,
-) -> Handle<Scene> {
+) -> Handle<WorldAsset> {
     debug!(
         "Loading character model {:?}",
         model_content_path.to_string_lossy()
@@ -154,15 +157,15 @@ struct CopiesSkinnedMeshFrom(Entity);
 struct CopiesSkinnedMeshTo(Vec<Entity>);
 
 fn copy_skinnedmesh_from_source(
-    sources: Query<Option<&bevy::scene::SceneInstance>, With<CopiesSkinnedMeshTo>>,
+    sources: Query<Option<&bevy::world_serialization::WorldInstance>, With<CopiesSkinnedMeshTo>>,
     targets: Query<(
         Entity,
         &CopiesSkinnedMeshFrom,
-        Option<&bevy::scene::SceneInstance>,
+        Option<&bevy::world_serialization::WorldInstance>,
     )>,
     mut skinned_meshes: Query<&mut bevy::mesh::skinning::SkinnedMesh>,
     children: Query<&Children>,
-    scene_spawner: Res<SceneSpawner>,
+    scene_spawner: Res<WorldInstanceSpawner>,
     mut commands: Commands,
 ) {
     for (target, target_source, target_scene) in targets {

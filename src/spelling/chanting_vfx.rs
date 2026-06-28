@@ -31,7 +31,7 @@ struct ElementQueueMoteSource(Entity);
 
 #[derive(Component, Debug, Reflect)]
 #[require(PointLight {
-    shadows_enabled: true,
+    shadow_maps_enabled: true,
     ..default()
 })]
 struct QueuedElementMote {

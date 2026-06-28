@@ -1,14 +1,15 @@
 use crate::PlayerControlled;
 use crate::magicka_level_model::CameraMesh;
 use bevy::{
+    camera::Hdr,
     camera::RenderTarget,
     core_pipeline::tonemapping::Tonemapping,
     input::InputSystems,
     post_process::bloom::Bloom,
     prelude::*,
-    render::view::Hdr,
     window::{PrimaryWindow, WindowRef},
 };
+#[cfg(feature = "audio")]
 use bevy_seedling::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -42,6 +43,7 @@ pub(crate) fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("Camera"),
         world_view_camera(),
+        #[cfg(feature = "audio")]
         SpatialListener3D,
         Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Dir3::Y),
         CameraGroupFollower {

@@ -106,7 +106,7 @@ pub(crate) fn spawn_light(
                 intensity: magnitude * MAGICKA_TO_LUMINOUS_INTENSITY,
                 range: *radius, // TODO: range
                 radius: 0.,     // TODO radius
-                shadows_enabled: light.cast_shadows,
+                shadow_maps_enabled: light.cast_shadows,
                 ..default()
             },))
         }
@@ -114,7 +114,7 @@ pub(crate) fn spawn_light(
             DirectionalLight {
                 color: diffuse_color,
                 illuminance: magnitude * MAGICKA_TO_ILLUMINANCE,
-                shadows_enabled: light.cast_shadows,
+                shadow_maps_enabled: light.cast_shadows,
                 ..default()
             },
             {
@@ -140,7 +140,7 @@ pub(crate) fn spawn_light(
             intensity: magnitude * MAGICKA_TO_LUMINOUS_INTENSITY,
             range: 20., // TODO: range
             radius: 0., // TODO radius
-            shadows_enabled: light.cast_shadows,
+            shadow_maps_enabled: light.cast_shadows,
             outer_angle: *cutoff_angle,
             inner_angle: *cutoff_angle * *sharpness,
             ..default()

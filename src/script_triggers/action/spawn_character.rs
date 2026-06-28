@@ -41,6 +41,7 @@ pub fn execute_spawn_character(
     };
     let spawner_transform = transform_helper
         .get(world)
+        .unwrap()
         .compute_global_transform(spawner_entity)
         .unwrap();
     let (current_scene_entity, _current_scene) = q_scenes.single(world).unwrap();
@@ -48,9 +49,9 @@ pub fn execute_spawn_character(
     let type_name = type_name.clone();
     for _ in 0..*nr {
         let spawn_transform = if sample_space {
-            use rand::{SeedableRng as _, distr::uniform::SampleRange as _};
+            use rand::distr::uniform::SampleRange as _;
             use std::f32::consts::TAU;
-            let mut rng = rand::rngs::SmallRng::from_os_rng();
+            let mut rng: rand::rngs::SmallRng = rand::make_rng();
             let local_point = vec3(
                 (-1.0..=1.0).sample_single(&mut rng).unwrap(),
                 (-1.0..=1.0).sample_single(&mut rng).unwrap(),

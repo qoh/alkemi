@@ -136,8 +136,8 @@ fn named_trigger_location(
         .compute_global_transform(source_entity)
         .ok()?;
     let location = if sample_space {
-        use rand::{SeedableRng as _, distr::uniform::SampleRange as _};
-        let mut rng = rand::rngs::SmallRng::from_os_rng();
+        use rand::distr::uniform::SampleRange as _;
+        let mut rng: rand::rngs::SmallRng = rand::make_rng();
         let local_point = vec3(
             (-1.0..=1.0).sample_single(&mut rng).unwrap(),
             (-1.0..=1.0).sample_single(&mut rng).unwrap(),

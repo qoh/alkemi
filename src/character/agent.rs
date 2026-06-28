@@ -33,7 +33,7 @@ pub fn spawn_follower(
         spawn_point_basename,
         player_index,
         &locators.query(world),
-        &global_transforms.get(world),
+        &global_transforms.get(world).unwrap(),
     )?;
 
     let follower = world.run_system_cached_with::<_, Result<_>, _, _>(

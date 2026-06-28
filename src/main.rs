@@ -1,3 +1,6 @@
+// TODO: Remove this when bevy_seedling updates to support bevy 0.19, since we disable it with an invalid #[cfg(feature)]
+#![allow(unexpected_cfgs)]
+
 mod camera;
 mod character;
 mod components_basic;
@@ -19,6 +22,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions},
 };
 use bevy_asset_loader::prelude::*;
+#[cfg(feature = "audio")]
 use bevy_seedling::prelude::*;
 
 fn main() -> AppExit {
@@ -31,6 +35,7 @@ fn main() -> AppExit {
         }),
         PhysicsPlugins::default(),
         bevy_enhanced_input::EnhancedInputPlugin,
+        #[cfg(feature = "audio")]
         SeedlingPlugin::default(),
         bevy_hanabi::HanabiPlugin,
     ))

@@ -38,7 +38,7 @@ pub fn spawn_player_character(
         spawn_point_basename,
         player_index,
         &locators.query(world),
-        &global_transforms.get(world),
+        &global_transforms.get(world).unwrap(),
     )?;
 
     let player_entity = world.run_system_cached_with::<_, Result<_>, _, _>(

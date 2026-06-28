@@ -27,7 +27,7 @@ pub fn load_skinned_model(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     assets: &AssetServer,
-) -> Scene {
+) -> WorldAsset {
     let mut world = World::default();
 
     // Load all the animaitons
@@ -134,5 +134,5 @@ pub fn load_skinned_model(
         world.entity_mut(root).add_child(model_entity);
     }
 
-    Scene::new(world)
+    WorldAsset::new(world)
 }

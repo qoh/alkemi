@@ -162,10 +162,10 @@ fn load_and_spawn_xna_model(
 
 fn attach_items_to_skeleton(
     waiting_items: Query<(Entity, &DeferredAttachedItem)>,
-    skeletons: Query<Option<&bevy::scene::SceneInstance>>,
+    skeletons: Query<Option<&bevy::world_serialization::WorldInstance>>,
     bones: Query<(Entity, &Name), With<Bone>>,
     children: Query<&Children>,
-    scene_spawner: Res<SceneSpawner>,
+    scene_spawner: Res<WorldInstanceSpawner>,
     mut commands: Commands,
 ) {
     for (item, defer_attach) in waiting_items {

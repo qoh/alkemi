@@ -213,7 +213,7 @@ fn display_queued_elements_text(
         let mut index = 0;
         text_writer.for_each(
             bar,
-            |_span, depth, mut text, _font, mut color, _line_height| {
+            |_span, depth, mut text, _font, mut color, _line_height, _letter_spacing| {
                 if depth != 1 {
                     return;
                 }
